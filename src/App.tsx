@@ -15,7 +15,6 @@ import {
 type Phase = 'intro' | 'playing' | 'ending'
 
 const MSG_DELAY = 800 // 消息逐条弹出间隔（初玩者节奏）
-const TAKEOVER_MS = 2400 // AI 全屏吞噬时长
 
 const speakerMeta: Record<Speaker, { name: string; bubble: string; align: string; avatar: string }> = {
   client: { name: '客户 · 李总', bubble: 'bg-sky-900/70 border-sky-700/60', align: 'justify-start', avatar: '甲' },
@@ -121,6 +120,7 @@ export default function App() {
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
+  const afterTakeover = useRef<(() => void) | null>(null)
   const chatBox = useRef<HTMLDivElement>(null)
   const optionsBox = useRef<HTMLElement>(null)
   const lastChosenRef = useRef('')
@@ -193,6 +193,7 @@ export default function App() {
   const startGame = () => {
     clearTimers()
     pending.current = null
+    afterTakeover.current = null
     setChat([])
     setFlags({})
     setCanvas(initialCanvas)
@@ -229,14 +230,13 @@ export default function App() {
     }
 
     if (opt.canvas?.aiVersion) {
-      // AI 结局：Logo 先吃掉整个屏幕，再出反应
+      // AI 结局：Logo 吃掉整个屏幕，等玩家点按才继续
+      afterTakeover.current = () => {
+        afterTakeover.current = null
+        setTakeover(false)
+        pushMessages(opt.reactions, afterReactions)
+      }
       setTakeover(true)
-      timers.current.push(
-        setTimeout(() => {
-          setTakeover(false)
-          pushMessages(opt.reactions, afterReactions)
-        }, TAKEOVER_MS),
-      )
     } else {
       pushMessages(opt.reactions, afterReactions)
     }
@@ -367,11 +367,17 @@ export default function App() {
         </section>
       </main>
 
-      {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身 */}
+      {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身（点按继续） */}
       {takeover && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/40">
+        <div
+          onClick={() => afterTakeover.current?.()}
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/40 cursor-pointer"
+        >
           <div className="bg-zinc-800 flex items-center justify-center animate-[takeoverZoom_1.1s_ease-in_forwards]">
             <span className="font-black text-zinc-100 tracking-tight animate-[takeoverText_1.1s_ease-in_forwards]">LOGO</span>
+          </div>
+          <div className="absolute bottom-10 inset-x-0 text-center text-zinc-500 text-sm animate-[fadeIn_.6s_ease_1.4s_both]">
+            点按任意处继续
           </div>
         </div>
       )}
