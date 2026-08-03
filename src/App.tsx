@@ -3,6 +3,7 @@ import {
   rounds,
   endings,
   nextRoundId,
+  resolveEnding,
   flagEpilogues,
   initialCanvas,
   type CanvasState,
@@ -12,6 +13,9 @@ import {
 } from './game/script'
 
 type Phase = 'intro' | 'playing' | 'ending'
+
+const MSG_DELAY = 800 // 消息逐条弹出间隔（初玩者节奏）
+const TAKEOVER_MS = 2400 // AI 全屏吞噬时长
 
 const speakerMeta: Record<Speaker, { name: string; bubble: string; align: string; avatar: string }> = {
   client: { name: '客户 · 李总', bubble: 'bg-sky-900/70 border-sky-700/60', align: 'justify-start', avatar: '甲' },
@@ -53,7 +57,7 @@ function ChatBubble({ msg }: { msg: ChatMsg }) {
 /** 中间画布：一张海报，Logo 会长大 */
 function Poster({ c }: { c: CanvasState }) {
   return (
-    <div className="relative w-full aspect-[3/4] max-h-full rounded-lg overflow-hidden border border-zinc-600 bg-gradient-to-b from-orange-100 to-amber-50 shadow-2xl">
+    <div className="relative w-full max-w-[200px] md:max-w-none aspect-[3/4] max-h-full rounded-lg overflow-hidden border border-zinc-600 bg-gradient-to-b from-orange-100 to-amber-50 shadow-2xl">
       {/* 产品图（被 Logo 挡住时仍然渲染在底层） */}
       {!c.aiVersion && (
         <div className="absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 w-[26%] h-[34%]">
@@ -111,11 +115,15 @@ export default function App() {
   const [canvas, setCanvas] = useState<CanvasState>(initialCanvas)
   const [flags, setFlags] = useState<Record<string, boolean>>({})
   const [available, setAvailable] = useState<Option[]>([])
-  const [busy, setBusy] = useState(false) // 消息正在逐条弹出 / 等待"继续"
+  const [busy, setBusy] = useState(false)
   const [canNext, setCanNext] = useState(false)
   const [endingId, setEndingId] = useState<string | null>(null)
+  const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
   const chatBox = useRef<HTMLDivElement>(null)
+  const optionsBox = useRef<HTMLElement>(null)
+  const lastChosenRef = useRef('')
 
   const clearTimers = () => {
     timers.current.forEach(clearTimeout)
@@ -126,19 +134,47 @@ export default function App() {
     chatBox.current?.scrollTo({ top: chatBox.current.scrollHeight, behavior: 'smooth' })
   }, [chat])
 
+  // 手机端：选项出现时自动滚到选项区，避免玩家不知道还有选项
+  useEffect(() => {
+    if ((available.length > 0 || canNext) && !busy && window.matchMedia('(max-width: 767px)').matches) {
+      const t = setTimeout(() => optionsBox.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120)
+      return () => clearTimeout(t)
+    }
+  }, [available.length, canNext, busy])
+
   useEffect(() => clearTimers, [])
 
-  /** 逐条把消息推进聊天框 */
+  /** 逐条把消息推进聊天框；点聊天区可快进 */
   const pushMessages = useCallback((msgs: ChatMsg[], done: () => void) => {
+    if (msgs.length === 0) {
+      done()
+      return
+    }
+    const p = { msgs, fired: 0, done }
+    pending.current = p
     msgs.forEach((m, i) => {
       timers.current.push(
         setTimeout(() => {
+          p.fired = i + 1
           setChat((prev) => [...prev, m])
-          if (i === msgs.length - 1) done()
-        }, 500 * (i + 1)),
+          if (i === msgs.length - 1) {
+            if (pending.current === p) pending.current = null
+            done()
+          }
+        }, MSG_DELAY * (i + 1)),
       )
     })
-    if (msgs.length === 0) done()
+  }, [])
+
+  /** 快进：立即补完当前队列 */
+  const flush = useCallback(() => {
+    const p = pending.current
+    if (!p) return
+    clearTimers()
+    pending.current = null
+    const rest = p.msgs.slice(p.fired)
+    if (rest.length) setChat((prev) => [...prev, ...rest])
+    p.done()
   }, [])
 
   const startRound = useCallback(
@@ -155,10 +191,14 @@ export default function App() {
   )
 
   const startGame = () => {
+    clearTimers()
+    pending.current = null
     setChat([])
     setFlags({})
     setCanvas(initialCanvas)
     setEndingId(null)
+    setTakeover(false)
+    lastChosenRef.current = ''
     setPhase('playing')
     startRound('r1')
   }
@@ -166,18 +206,19 @@ export default function App() {
   const choose = (opt: Option) => {
     if (busy) return
     setBusy(true)
+    const mergedFlags = opt.flags ? { ...flags, ...opt.flags } : flags
     if (opt.canvas) setCanvas((c) => ({ ...c, ...opt.canvas }))
-    if (opt.flags) setFlags((f) => ({ ...f, ...opt.flags }))
-    pushMessages(opt.reactions, () => {
+    if (opt.flags) setFlags(mergedFlags)
+
+    const afterReactions = () => {
       if (opt.ending) {
-        setEndingId(opt.ending)
+        setEndingId(resolveEnding(opt.ending, mergedFlags))
         setBusy(false)
         setCanNext(false)
         setPhase('ending')
         return
       }
       if (opt.funnel) {
-        // 留在本回合，移除这个选项，继续选
         setAvailable((prev) => prev.filter((o) => o.id !== opt.id))
         setBusy(false)
       } else {
@@ -185,20 +226,30 @@ export default function App() {
         setBusy(false)
         setCanNext(true)
       }
-    })
+    }
+
+    if (opt.canvas?.aiVersion) {
+      // AI 结局：Logo 先吃掉整个屏幕，再出反应
+      setTakeover(true)
+      timers.current.push(
+        setTimeout(() => {
+          setTakeover(false)
+          pushMessages(opt.reactions, afterReactions)
+        }, TAKEOVER_MS),
+      )
+    } else {
+      pushMessages(opt.reactions, afterReactions)
+    }
   }
 
-  const goNext = () => {
-    // canNext 只在非 funnel、非结局时出现
-    const next = nextRoundId(roundId, lastChosenRef.current)
-    if (next) startRound(next)
-  }
-
-  // 记录本回合最终选定的选项 id（funnel 选项不算）
-  const lastChosenRef = useRef('')
   const chooseTracked = (opt: Option) => {
     if (!opt.funnel) lastChosenRef.current = opt.id
     choose(opt)
+  }
+
+  const goNext = () => {
+    const next = nextRoundId(roundId, lastChosenRef.current)
+    if (next) startRound(next)
   }
 
   const epilogues = flagEpilogues(flags)
@@ -210,7 +261,7 @@ export default function App() {
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
         <div className="text-6xl font-black tracking-widest">再大一点</div>
         <div className="text-zinc-400 text-sm tracking-wide">一个你永远无法满足甲方需求的荒诞选择游戏</div>
-        <div className="text-zinc-600 text-xs">DAY 1 · 三条需求 · 大约 3 分钟</div>
+        <div className="text-zinc-600 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
         <button
           onClick={startGame}
           className="mt-4 px-10 py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-lg tracking-widest transition-colors shadow-[0_0_30px_rgba(245,158,11,.35)]"
@@ -226,7 +277,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
         <div className="text-xs tracking-[0.5em] text-zinc-500">DAY 1 结束</div>
-        <div className="text-4xl font-black">{ending.title}</div>
+        <div className="text-4xl font-black text-center">{ending.title}</div>
         <div className="max-w-lg w-full space-y-3 mt-2">
           {ending.lines.map((m, i) => (
             <ChatBubble key={i} msg={m} />
@@ -260,11 +311,14 @@ export default function App() {
         <div className="text-xs text-zinc-500">DAY 1 · {round.label}</div>
       </header>
 
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_1.1fr_1fr] gap-3 p-3 min-h-0">
-        {/* 左：需求聊天 */}
-        <section className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
-          <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500">需求 / 私聊</div>
-          <div ref={chatBox} className="flex-1 overflow-y-auto p-3 space-y-3">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_1.1fr_1fr] gap-3 p-3 min-h-0 overflow-y-auto md:overflow-hidden">
+        {/* 左：需求聊天（点按可快进） */}
+        <section className="flex flex-col min-h-[40vh] md:min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
+          <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500 flex justify-between">
+            <span>需求 / 私聊</span>
+            {busy && <span className="text-zinc-600">点按可快进</span>}
+          </div>
+          <div ref={chatBox} onClick={flush} className="flex-1 overflow-y-auto p-3 space-y-3 cursor-pointer">
             {chat.map((m, i) => (
               <ChatBubble key={i} msg={m} />
             ))}
@@ -283,36 +337,44 @@ export default function App() {
           </div>
         </section>
 
-        {/* 右：操作 */}
-        <section className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
+        {/* 右：操作（手机端两列平铺，全部露出） */}
+        <section ref={optionsBox} className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500">你的操作</div>
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 content-start">
+          <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3 content-start">
             {available.map((o) => (
               <button
                 key={o.id}
                 disabled={busy}
                 onClick={() => chooseTracked(o)}
-                className="w-full text-left rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-amber-500/70 hover:bg-amber-500/10 disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:bg-zinc-800/60 p-4 transition-colors"
+                className="w-full text-left rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-amber-500/70 hover:bg-amber-500/10 disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:bg-zinc-800/60 p-3 md:p-4 transition-colors"
               >
-                <div className="font-bold text-sm">{o.label}</div>
+                <div className="font-bold text-sm leading-snug">{o.label}</div>
                 {o.sub && <div className="text-xs text-zinc-500 mt-1">{o.sub}</div>}
               </button>
             ))}
-            {available.length === 0 && !canNext && !busy && null}
             {canNext && (
               <button
                 onClick={goNext}
-                className="w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-4 tracking-widest transition-colors"
+                className="col-span-2 md:col-span-1 w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-4 tracking-widest transition-colors"
               >
                 下一条需求 →
               </button>
             )}
             {!canNext && available.length === 0 && busy && (
-              <div className="text-center text-xs text-zinc-600 animate-pulse pt-4">等待对方回复……</div>
+              <div className="col-span-2 md:col-span-1 text-center text-xs text-zinc-600 animate-pulse pt-4">等待对方回复……</div>
             )}
           </div>
         </section>
       </main>
+
+      {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身 */}
+      {takeover && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/40">
+          <div className="bg-zinc-800 flex items-center justify-center animate-[takeoverZoom_1.1s_ease-in_forwards]">
+            <span className="font-black text-zinc-100 tracking-tight animate-[takeoverText_1.1s_ease-in_forwards]">LOGO</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

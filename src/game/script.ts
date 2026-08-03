@@ -255,6 +255,13 @@ export const rounds: Record<string, Round> = {
           { from: 'system', text: '第 7 版，是你最初的那版专业稿。' },
         ],
       },
+      {
+        id: 'R3D',
+        label: '（已读不回）',
+        sub: '……',
+        ending: 'ignore',
+        reactions: [],
+      },
     ],
   },
 }
@@ -293,6 +300,76 @@ export const endings: Record<string, Ending> = {
       { from: 'director', text: '（私聊）你是我见过的第一个把甲方绕晕的人。' },
     ],
   },
+  ignore: {
+    title: '结局 · 已读不回',
+    lines: [
+      { from: 'system', text: '消息已被对方已读。' },
+      { from: 'system', text: '三天过去了。' },
+      { from: 'client', text: '在吗？' },
+      { from: 'system', text: '你没有回复。' },
+      { from: 'director', text: '（私聊）全公司都在猜你为什么已读不回。' },
+      { from: 'director', text: '别解释。他们现在看你的眼神都不一样了。' },
+    ],
+  },
+  // ─── 旗标组合结局：第 3 轮选择 × 过程中做过的事 ───
+  ai_sneaky: {
+    title: '结局 · AI 学会了你的坏毛病',
+    lines: [
+      { from: 'system', text: '智稿AI自主学习通报：已习得「产品图微缩藏入Logo」创新技法，并推广至全平台模板。' },
+      { from: 'director', text: '（私聊）它连这个都学会了。' },
+      { from: 'director', text: '你高兴吗。' },
+    ],
+  },
+  ai_trust: {
+    title: '结局 · AI 解决不了的事',
+    lines: [
+      { from: 'client', text: 'AI 出图是快。' },
+      { from: 'client', text: '但上次印刷厂那事，AI 可救不了我。' },
+      { from: 'client', text: '以后正经事，我还找你。' },
+    ],
+  },
+  ai_money: {
+    title: '结局 · AI 时代的包租公',
+    lines: [
+      { from: 'client', text: '那个 20%「版本管理费」，我照付。' },
+      { from: 'client', text: '万一哪天 AI 把文件发错了呢。' },
+      { from: 'director', text: '（私聊）你可能是全公司唯一一个，因为 AI 上线反而涨薪的人。' },
+    ],
+  },
+  hand_trust: {
+    title: '结局 · 甲方的自己人',
+    lines: [
+      { from: 'client', text: '以后我们的单子，不要用那个 AI。' },
+      { from: 'client', text: '就要你亲手做的。' },
+      { from: 'director', text: '（私聊）恭喜，你有了「客户指定」待遇。' },
+      { from: 'director', text: '这待遇，AI 抢不走。' },
+    ],
+  },
+  hand_money: {
+    title: '结局 · 涨价的手艺人',
+    lines: [
+      { from: 'client', text: '亲手做的？那得加钱吧。' },
+      { from: 'client', text: '加。别拿 AI 糊弄我。' },
+      { from: 'director', text: '（私聊）AI 让设计免费，让「你做的」收费。' },
+    ],
+  },
+}
+
+/** 结局 = 第 3 轮选择 × 过程旗标，按优先级命中组合结局 */
+export function resolveEnding(choice: string, flags: Record<string, boolean>): string {
+  if (choice === 'ignore') return 'ignore'
+  if (choice === 'ai') {
+    if (flags.sneaky) return 'ai_sneaky'
+    if (flags.trust) return 'ai_trust'
+    if (flags.money) return 'ai_money'
+    return 'ai'
+  }
+  if (choice === 'hand') {
+    if (flags.trust) return 'hand_trust'
+    if (flags.money) return 'hand_money'
+    return 'hand'
+  }
+  return 'chaos'
 }
 
 // 过程中攒下的"债务"，在结尾一并结算

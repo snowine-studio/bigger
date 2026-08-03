@@ -84,3 +84,24 @@
     transform: translateY(0);
   }
 }
+
+/* AI 结局：Logo 膨胀吞噬整个屏幕 */
+@keyframes takeoverZoom {
+  from {
+    width: 18vmin;
+    height: 18vmin;
+  }
+  to {
+    width: 300vmax;
+    height: 300vmax;
+  }
+}
+
+@keyframes takeoverText {
+  from {
+    font-size: 14px;
+  }
+  to {
+    font-size: 60vmin;
+  }
+}
