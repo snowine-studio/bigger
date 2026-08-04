@@ -35,6 +35,8 @@ export interface Option {
   flags?: Record<string, boolean>
   /** true = 选完后留在本回合，从剩余选项里再选一次 */
   funnel?: boolean
+  /** true = 触发打包 zip 动画（R3C） */
+  zip?: boolean
   /** 第 3 轮专用：直接指向结局 */
   ending?: string
 }
@@ -246,6 +248,7 @@ export const rounds: Record<string, Round> = {
         id: 'R3C',
         label: '把这几天所有版本打包发给客户，让他自己选',
         sub: 'v1 到 v9，一网打尽',
+        zip: true,
         ending: 'chaos',
         reactions: [
           { from: 'me', text: '（附件：海报_v1.zip …… 海报_v9_最终_真的最终.zip）' },
@@ -281,6 +284,22 @@ export const deliveryFiles: Record<string, string> = {
   r2A: '海报_v2_最终版.psd',
   r2C: '海报_专业版_最终版.psd',
 }
+
+// R3C 打包动画：设计师的命名堕落史
+export const zipFiles: string[] = [
+  '海报_v1.psd',
+  '海报_v2.psd',
+  '海报_v2_修改.psd',
+  '海报_v3_大气版.psd',
+  '海报_v4_更大气.psd',
+  '海报_v5_最终版.psd',
+  '海报_v6_最终版2.psd',
+  '海报_v7_专业版.psd',
+  '海报_v8_真的最终版.psd',
+  '海报_v9_最终_再改是狗.psd',
+]
+
+export const zipName = '海报_全部版本_你挑一个.zip'
 
 export interface Ending {
   title: string

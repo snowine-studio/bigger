@@ -4,6 +4,8 @@ import {
   endings,
   nextRoundId,
   deliveryFiles,
+  zipFiles,
+  zipName,
   resolveEnding,
   flagEpilogues,
   initialCanvas,
@@ -13,6 +15,64 @@ import {
   type Speaker,
 } from './game/script'
 import * as sfx from './game/audio'
+
+/** 打包 zip 全屏动画：文件逐个弹出 → 压成 zip → 盖章发送 → 点按继续 */
+function ZipOverlay({ onDone }: { onDone: () => void }) {
+  const [shown, setShown] = useState(0)
+  const [zipped, setZipped] = useState(false)
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setShown((s) => {
+        if (s >= zipFiles.length) {
+          clearInterval(iv)
+          return s
+        }
+        sfx.pop('me')
+        return s + 1
+      })
+    }, 230)
+    return () => clearInterval(iv)
+  }, [])
+
+  useEffect(() => {
+    if (shown >= zipFiles.length && !zipped) {
+      const t = setTimeout(() => {
+        setZipped(true)
+        sfx.stamp()
+      }, 380)
+      return () => clearTimeout(t)
+    }
+  }, [shown, zipped])
+
+  return (
+    <div
+      onClick={() => zipped && onDone()}
+      className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center gap-2 p-6 cursor-pointer"
+    >
+      {!zipped ? (
+        <div className="w-full max-w-md space-y-1.5">
+          {zipFiles.slice(0, shown).map((f, i) => (
+            <div
+              key={i}
+              className="bg-white text-black font-mono text-xs md:text-sm px-3 py-1.5 border-2 border-black shadow-[3px_3px_0_#1e50a2] animate-[fadeIn_.15s_ease]"
+            >
+              📄 {f}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="bg-[#ffe800] text-black font-black text-base md:text-xl px-6 py-4 border-4 border-black shadow-[8px_8px_0_#e60012] rotate-[-1deg] animate-[fadeIn_.2s_ease]">
+            📦 {zipName}
+          </div>
+          <div className="text-lime-300 font-black text-sm mt-2 tracking-widest">已发送 ✓</div>
+          <div className="text-zinc-500 text-xs mt-4">点按任意处继续</div>
+        </>
+      )}
+    </div>
+  )
+}
 
 /** 全局静音开关 */
 function MuteBtn() {
@@ -215,6 +275,7 @@ export default function App() {
   const [canNext, setCanNext] = useState(false)
   const [endingId, setEndingId] = useState<string | null>(null)
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
+  const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
@@ -298,6 +359,7 @@ export default function App() {
     setCanvas(initialCanvas)
     setEndingId(null)
     setTakeover(false)
+    setZipFx(false)
     lastChosenRef.current = ''
     setPhase('playing')
     startRound('r1')
@@ -329,7 +391,15 @@ export default function App() {
       }
     }
 
-    if (opt.canvas?.aiVersion) {
+    if (opt.zip) {
+      // 打包发客户：文件逐个弹出压成 zip，点按才继续
+      afterTakeover.current = () => {
+        afterTakeover.current = null
+        setZipFx(false)
+        pushMessages(opt.reactions, afterReactions)
+      }
+      setZipFx(true)
+    } else if (opt.canvas?.aiVersion) {
       // AI 结局：Logo 吃掉整个屏幕，等玩家点按才继续
       afterTakeover.current = () => {
         afterTakeover.current = null
@@ -516,19 +586,25 @@ export default function App() {
         </div>
       )}
 
-      {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身（点按继续） */}
+      {/* 打包 zip 动画 */}
+      {zipFx && <ZipOverlay onDone={() => afterTakeover.current?.()} />}
+
+      {/* AI 全屏吞噬：新丑风贴纸标吃掉整个屏幕（点按继续） */}
       {takeover && (
         <div
           onClick={() => {
             sfx.click()
             afterTakeover.current?.()
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/40 cursor-pointer"
+          className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#ffd23f]/70 cursor-pointer"
         >
-          <div className="bg-zinc-800 flex items-center justify-center animate-[takeoverZoom_1.1s_ease-in_forwards]">
-            <span className="font-black text-zinc-100 tracking-tight animate-[takeoverText_1.1s_ease-in_forwards]">LOGO</span>
+          <div
+            className="bg-white flex items-center justify-center animate-[takeoverZoom_1.1s_ease-in_forwards]"
+            style={{ borderRadius: '50%', border: '8px solid #000', boxShadow: '16px 16px 0 #e60012' }}
+          >
+            <span className="font-black text-black tracking-tight animate-[takeoverText_1.1s_ease-in_forwards]">LOGO</span>
           </div>
-          <div className="absolute bottom-10 inset-x-0 text-center text-zinc-500 text-sm animate-[fadeIn_.6s_ease_1.4s_both]">
+          <div className="absolute bottom-10 inset-x-0 text-center text-black/60 font-bold text-sm animate-[fadeIn_.6s_ease_1.4s_both]">
             点按任意处继续
           </div>
         </div>

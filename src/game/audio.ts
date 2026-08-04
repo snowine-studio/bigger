@@ -100,20 +100,21 @@ export function pop(speaker: 'client' | 'director' | 'system' | 'me') {
   tone({ type: 'triangle', freq: base * 2, dur: 0.04, gain: 0.03 })
 }
 
-/** 交付盖章：ka-chunk 爽感 = 低频重锤 + 机械噪声 + 金属尾音 */
+/** 交付盖章：清脆两段式「咔-嗒」= 高频脆击 + 机械咬合 + 一点低频身体感 */
 export function stamp() {
   if (muted) return
   const c = ac()
   const t0 = c.currentTime
-  // 1. 机械撞击噪声（闷）
-  noise(0.1, t0, 0.4, 500)
-  // 2. 低频重锤（身体感）
-  tone({ type: 'sine', freq: 110, freqEnd: 48, at: t0, dur: 0.22, gain: 0.5, attack: 0.002 })
-  // 3. 腔体共鸣
-  tone({ type: 'triangle', freq: 220, freqEnd: 130, at: t0 + 0.015, dur: 0.14, gain: 0.16 })
-  // 4. 金属尾音 ting
-  tone({ type: 'square', freq: 1900, at: t0 + 0.05, dur: 0.05, gain: 0.035 })
-  tone({ type: 'square', freq: 2600, at: t0 + 0.07, dur: 0.04, gain: 0.02 })
+  // 咔：高频脆击（瞬态要尖）
+  noise(0.025, t0, 0.45, 2500)
+  tone({ type: 'square', freq: 880, freqEnd: 420, at: t0, dur: 0.03, gain: 0.14, attack: 0.001 })
+  // 嗒：中频机械咬合（主体）
+  noise(0.05, t0 + 0.045, 0.5, 1100)
+  tone({ type: 'triangle', freq: 340, freqEnd: 140, at: t0 + 0.045, dur: 0.09, gain: 0.3, attack: 0.001 })
+  // 低频垫底（保留一点身体感，不糊）
+  tone({ type: 'sine', freq: 150, freqEnd: 70, at: t0 + 0.045, dur: 0.11, gain: 0.22, attack: 0.001 })
+  // 金属尾音
+  tone({ type: 'square', freq: 2300, at: t0 + 0.09, dur: 0.04, gain: 0.03 })
 }
 
 // ─────────────────────── BGM：滑稽跳音循环 ───────────────────────
