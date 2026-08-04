@@ -293,6 +293,13 @@ export default function App() {
     chatBox.current?.scrollTo({ top: chatBox.current.scrollHeight, behavior: 'smooth' })
   }, [chat])
 
+  // Logo 每变大一次就触发音效，体积越大越夸张
+  const prevLogoSize = useRef(initialCanvas.logoSize)
+  useEffect(() => {
+    if (canvas.logoSize > prevLogoSize.current) sfx.grow(canvas.logoSize)
+    prevLogoSize.current = canvas.logoSize
+  }, [canvas.logoSize])
+
   // 手机端：选项出现时自动滚到选项区，避免玩家不知道还有选项
   useEffect(() => {
     if ((available.length > 0 || canNext) && !busy && window.matchMedia('(max-width: 767px)').matches) {
@@ -421,7 +428,7 @@ export default function App() {
     const next = nextRoundId(roundId, lastChosenRef.current)
     if (!next) return
     // 剧情内动作：先把稿子发出去，新需求自己找上门
-    sfx.stamp() // 盖章爽感
+    sfx.drop() // macOS 式"把文件丢进去"的 plop
     setBusy(true)
     pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
   }

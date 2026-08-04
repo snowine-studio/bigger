@@ -100,7 +100,48 @@ export function pop(speaker: 'client' | 'director' | 'system' | 'me') {
   tone({ type: 'triangle', freq: base * 2, dur: 0.04, gain: 0.03 })
 }
 
-/** 交付盖章：清脆两段式「咔-嗒」= 高频脆击 + 机械咬合 + 一点低频身体感 */
+/** 发送文件：macOS 式"把文件丢进去"的液体 plop */
+export function drop() {
+  if (muted) return
+  const c = ac()
+  const t0 = c.currentTime
+  // 气流吸入感
+  noise(0.08, t0, 0.22, 900)
+  // 液体 plop：音高快速下坠
+  tone({ type: 'sine', freq: 340, freqEnd: 130, at: t0 + 0.02, dur: 0.13, gain: 0.32, attack: 0.004 })
+  tone({ type: 'triangle', freq: 180, freqEnd: 90, at: t0 + 0.05, dur: 0.1, gain: 0.15 })
+  // 入水瞬间的小脆点
+  tone({ type: 'sine', freq: 1400, freqEnd: 900, at: t0, dur: 0.025, gain: 0.06, attack: 0.001 })
+}
+
+/** Logo 长大：体积越大，音效越低、越长、越夸张 */
+export function grow(size: number) {
+  if (muted) return
+  const c = ac()
+  const t0 = c.currentTime
+  const f0 = 520 - size * 3.2 // 越大越低
+  const dur = 0.14 + size / 220 // 越大越长
+  const g = 0.08 + size / 500 // 越大越响
+  // 橡胶 boing：先压扁再弹起
+  const osc = c.createOscillator()
+  const gn = c.createGain()
+  osc.type = 'square'
+  osc.frequency.setValueAtTime(f0 * 0.55, t0)
+  osc.frequency.exponentialRampToValueAtTime(f0 * 1.15, t0 + dur * 0.45)
+  osc.frequency.exponentialRampToValueAtTime(f0 * 0.85, t0 + dur)
+  gn.gain.setValueAtTime(0, t0)
+  gn.gain.linearRampToValueAtTime(g, t0 + 0.01)
+  gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+  osc.connect(gn).connect(out())
+  osc.start(t0)
+  osc.stop(t0 + dur + 0.05)
+  // 低频身体感随体积增强
+  tone({ type: 'sine', freq: 180 - size, freqEnd: 60, at: t0, dur: dur * 0.8, gain: size / 400 })
+  // 大到 80% 以上附加一声闷"轰"
+  if (size >= 80) noise(0.12, t0, 0.2, 400)
+}
+
+/** 打包盖章：清脆两段式「咔-嗒」（zip 动画专用） */
 export function stamp() {
   if (muted) return
   const c = ac()
