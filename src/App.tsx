@@ -12,6 +12,24 @@ import {
   type Option,
   type Speaker,
 } from './game/script'
+import * as sfx from './game/audio'
+
+/** 全局静音开关 */
+function MuteBtn() {
+  const [m, setM] = useState(sfx.isMuted())
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setM(sfx.toggleMute())
+      }}
+      className="fixed bottom-3 right-3 z-[60] w-10 h-10 rounded-full bg-zinc-800 border-2 border-black text-sm flex items-center justify-center shadow-[3px_3px_0_#000] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+      title={m ? '取消静音' : '静音'}
+    >
+      {m ? '🔇' : '🔊'}
+    </button>
+  )
+}
 
 type Phase = 'intro' | 'playing' | 'ending'
 
@@ -237,6 +255,7 @@ export default function App() {
         setTimeout(() => {
           p.fired = i + 1
           setChat((prev) => [...prev, m])
+          sfx.pop(m.from)
           if (i === msgs.length - 1) {
             if (pending.current === p) pending.current = null
             done()
@@ -286,6 +305,7 @@ export default function App() {
 
   const choose = (opt: Option) => {
     if (busy) return
+    sfx.click()
     setBusy(true)
     const mergedFlags = opt.flags ? { ...flags, ...opt.flags } : flags
     if (opt.canvas) setCanvas((c) => ({ ...c, ...opt.canvas }))
@@ -331,6 +351,7 @@ export default function App() {
     const next = nextRoundId(roundId, lastChosenRef.current)
     if (!next) return
     // 剧情内动作：先把稿子发出去，新需求自己找上门
+    sfx.stamp() // 盖章爽感
     setBusy(true)
     pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
   }
@@ -341,7 +362,10 @@ export default function App() {
   // ─────────────── 开场 ───────────────
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden">
+      <div
+        className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden"
+        onPointerDown={() => sfx.startBgm()}
+      >
         {/* 椰树风跑马灯：上下各一条 */}
         <Marquee className="top-0" />
         <Marquee className="bottom-0" reverse />
@@ -351,11 +375,16 @@ export default function App() {
         </div>
         <div className="text-zinc-500 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
         <button
-          onClick={startGame}
+          onClick={() => {
+            sfx.stopBgm()
+            sfx.click()
+            startGame()
+          }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
           接单
         </button>
+        <MuteBtn />
       </div>
     )
   }
@@ -381,11 +410,15 @@ export default function App() {
         )}
         <div className="text-zinc-600 text-sm mt-2">DAY 2（待续）</div>
         <button
-          onClick={startGame}
+          onClick={() => {
+            sfx.click()
+            startGame()
+          }}
           className="px-8 py-3 bg-[#ffe800] text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1e50a2] transition-all"
         >
           再过一遍 DAY 1
         </button>
+        <MuteBtn />
       </div>
     )
   }
@@ -417,7 +450,10 @@ export default function App() {
           </div>
           <div
             className="flex-1 min-h-0 flex items-center justify-center max-h-[24vh] md:max-h-none cursor-zoom-in"
-            onClick={() => setZoomed(true)}
+            onClick={() => {
+              sfx.click()
+              setZoomed(true)
+            }}
             title="点按放大"
           >
             <Poster c={canvas} />
@@ -467,7 +503,10 @@ export default function App() {
       {/* 海报全屏放大：点一下看细节，再点收起 */}
       {zoomed && (
         <div
-          onClick={() => setZoomed(false)}
+          onClick={() => {
+            sfx.click()
+            setZoomed(false)
+          }}
           className="fixed inset-0 z-40 bg-black/90 flex flex-col items-center justify-center gap-3 cursor-zoom-out animate-[fadeIn_.2s_ease]"
         >
           <div className="w-[min(88vw,68vh)]">
@@ -480,7 +519,10 @@ export default function App() {
       {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身（点按继续） */}
       {takeover && (
         <div
-          onClick={() => afterTakeover.current?.()}
+          onClick={() => {
+            sfx.click()
+            afterTakeover.current?.()
+          }}
           className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-zinc-950/40 cursor-pointer"
         >
           <div className="bg-zinc-800 flex items-center justify-center animate-[takeoverZoom_1.1s_ease-in_forwards]">
@@ -491,6 +533,8 @@ export default function App() {
           </div>
         </div>
       )}
+
+      <MuteBtn />
     </div>
   )
 }
