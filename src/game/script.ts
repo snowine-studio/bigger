@@ -11,11 +11,11 @@ export interface ChatMsg {
 }
 
 export interface CanvasState {
-  logoSize: number // logo 占画面宽度百分比
-  slogan: boolean // 金色闪烁 slogan
-  productInLogo: boolean // 产品图被偷偷塞进 logo
-  aiVersion: boolean // AI 一键生成版（logo 糊满全屏）
-  proVersion: boolean // 你亲手改的专业版
+  logoSize: number
+  slogan: boolean
+  productInLogo: boolean
+  aiVersion: boolean
+  proVersion: boolean
 }
 
 export const initialCanvas: CanvasState = {
@@ -37,8 +37,10 @@ export interface Option {
   funnel?: boolean
   /** true = 触发打包 zip 动画（R3C） */
   zip?: boolean
-  /** 第 3 轮专用：直接指向结局 */
+  /** 生存结局 id */
   ending?: string
+  /** 毕业死法 id（菜鸟设计师的一万种死法） */
+  death?: string
 }
 
 export interface Round {
@@ -49,16 +51,26 @@ export interface Round {
   options: Option[]
 }
 
+const SAVE_OPTION: Option = {
+  id: 'S',
+  label: '💾 先保存一下（Ctrl+S）',
+  sub: '花不了几秒钟',
+  funnel: true,
+  flags: { saved: true },
+  reactions: [{ from: 'me', text: '（你按下了 Ctrl+S。进度已保存。）' }],
+}
+
 export const rounds: Record<string, Round> = {
   // ───────────────────────── 第 1 轮：再大一点 ─────────────────────────
   r1: {
     id: 'r1',
     label: '需求 1 / 3',
     intro: [
-      { from: 'system', text: '【新派单】客户 · 李总（年费合同客户）' },
-      { from: 'client', text: '在吗？海报初稿看了。' },
-      { from: 'client', text: '整体不错，很有感觉。' },
-      { from: 'client', text: '但是吧……不够大气。' },
+      { from: 'system', text: '【新派单】客户 · 李总｜宏达国际商贸（集团）有限公司' },
+      { from: 'client', text: '辛苦辛苦，在忙吗？' },
+      { from: 'client', text: '海报初稿看了，整体不错，很有感觉。' },
+      { from: 'client', text: '但是吧……不够国际化。' },
+      { from: 'client', text: '我们明年可是要去纳斯达克敲钟的。' },
       { from: 'client', text: 'Logo，再大一点。', hot: true },
     ],
     canvas: { logoSize: 30 },
@@ -70,9 +82,10 @@ export const rounds: Record<string, Round> = {
         canvas: { logoSize: 62 },
         reactions: [
           { from: 'me', text: '（你把 Logo 从 30% 拉到了 62%。）' },
-          { from: 'client', text: '哎——对！这就是我要的大气！！' },
-          { from: 'director', text: '（私聊）你为什么把产品图挡住了？？？' },
-          { from: 'director', text: '……算了。客户高兴就好。吧。' },
+          { from: 'client', text: '哎呀——对！就是这个感觉！国际化！' },
+          { from: 'client', text: '改完这单给你加鸡腿 🍗' },
+          { from: 'director', text: '（私聊）大群里我就不说什么了。' },
+          { from: 'director', text: '（私聊）Logo 把产品挡住了。算了，年费到账就好。' },
         ],
       },
       {
@@ -82,8 +95,8 @@ export const rounds: Record<string, Round> = {
         funnel: true,
         reactions: [
           { from: 'me', text: '李总，Logo 已经占画面 30% 了，再大会挤压产品主体，视觉层级会——' },
-          { from: 'client', text: '我不是设计师，我不懂什么比例。' },
-          { from: 'client', text: '你就告诉我：能不能，再，大，一，点？' },
+          { from: 'client', text: '哎呀，我不懂这些专业的。' },
+          { from: 'client', text: '你就告诉我，能不能，再，大，一，点？辛苦啦！' },
           { from: 'director', text: '（私聊）别跟他讲道理。他签的是年费合同。' },
         ],
       },
@@ -95,26 +108,40 @@ export const rounds: Record<string, Round> = {
         flags: { twoVersions: true },
         reactions: [
           { from: 'me', text: '（你提交了放大版，同时在文件夹深处留下了 v_专业版.psd。）' },
-          { from: 'client', text: '这版可以！就它了！' },
+          { from: 'client', text: '这版可以！国际化！就它了！' },
           { from: 'system', text: '你悄悄保留了另一个版本。没有人知道。' },
+        ],
+      },
+      {
+        id: 'D',
+        label: '跟李总深入探讨设计理论',
+        sub: '（不建议）',
+        death: 'reason',
+        reactions: [
+          { from: 'me', text: '李总，设计是一门关于信息层级的科学，我们先从格式塔原理说起——' },
+          { from: 'client', text: '……' },
+          { from: 'client', text: '麻烦把你们总监电话给我一下，谢谢。' },
         ],
       },
     ],
   },
 
-  // ───────────────────── 第 2 轮 A 线：老板也看了 ─────────────────────
+  // ───────────────────── 第 2 轮 A 线：儿子与老板 ─────────────────────
   r2A: {
     id: 'r2A',
     label: '需求 2 / 3',
     intro: [
       { from: 'system', text: '【新派单 · 加急】客户 · 李总' },
-      { from: 'client', text: '在吗？我们老板看到海报了。' },
-      { from: 'client', text: '老板说：Logo 还不够大。', hot: true },
-      { from: 'client', text: '顺便加一句 slogan：「行业领导者」。' },
-      { from: 'client', text: '要金色的。会闪的那种。' },
+      { from: 'system', text: '【IT 部通知】今日 15:00 机房检修，可能断电，请随时保存文件。' },
+      { from: 'client', text: '在吗辛苦啦！' },
+      { from: 'client', text: '我儿子看了海报，他说不行。' },
+      { from: 'client', text: '他今年七岁，审美很前卫。' },
+      { from: 'client', text: '我们老板也发话了：Logo 还不够大。', hot: true },
+      { from: 'client', text: '再加句 slogan：「行业领导者」，要金色的，会闪的，对标苹果。' },
     ],
     canvas: { logoSize: 62 },
     options: [
+      SAVE_OPTION,
       {
         id: 'A1',
         label: '照做：再放大 + 金色闪烁 slogan',
@@ -122,9 +149,9 @@ export const rounds: Record<string, Round> = {
         canvas: { logoSize: 82, slogan: true },
         reactions: [
           { from: 'me', text: '（Logo 占满画面，产品彻底消失，slogan 金光闪闪。）' },
-          { from: 'client', text: '完美！老板非常满意！！' },
-          { from: 'director', text: '（私聊）这图……产品在哪？' },
-          { from: 'director', text: '哦。在 Logo 底下。行吧。' },
+          { from: 'client', text: '完美！老板和我儿子都特别满意！' },
+          { from: 'director', text: '（私聊）大群里我点了赞。' },
+          { from: 'director', text: '（私聊）产品在哪？哦，在 Logo 底下。行吧。' },
         ],
       },
       {
@@ -134,8 +161,9 @@ export const rounds: Record<string, Round> = {
         funnel: true,
         reactions: [
           { from: 'director', text: '（私聊）我也想帮你。' },
-          { from: 'director', text: '但是他老板，是我们年费合同的签字人。' },
-          { from: 'director', text: '……你知道该怎么办。' },
+          { from: 'director', text: '（私聊）但他老板是年费合同的签字人。' },
+          { from: 'director', text: '（私聊）我电脑里有 57 个「最终版」。你猜我怎么攒的？' },
+          { from: 'director', text: '（私聊）照做吧。活着重要。' },
         ],
       },
       {
@@ -146,9 +174,20 @@ export const rounds: Record<string, Round> = {
         flags: { sneaky: true },
         reactions: [
           { from: 'me', text: '（你把产品图缩到指甲盖大小，P 进了 Logo 的角落。）' },
-          { from: 'client', text: '大气！！' },
+          { from: 'client', text: '大气！！辛苦辛苦！' },
           { from: 'director', text: '（私聊）你把产品 P 进 Logo 里了？' },
-          { from: 'director', text: '有点东西。别让客户发现。' },
+          { from: 'director', text: '（私聊）有点东西。别让客户发现。' },
+        ],
+      },
+      {
+        id: 'A4',
+        label: '直接联系李总的老板反映情况',
+        sub: '（越级，慎重）',
+        death: 'leapfrog',
+        reactions: [
+          { from: 'me', text: '（你找到了老板的微信，发送了好友申请。）' },
+          { from: 'system', text: '对方已通过你的好友申请。' },
+          { from: 'system', text: '十分钟后：对方已开启朋友验证，请先发送验证请求……' },
         ],
       },
     ],
@@ -160,13 +199,15 @@ export const rounds: Record<string, Round> = {
     label: '需求 2 / 3',
     intro: [
       { from: 'system', text: '【紧急私聊】客户 · 李总' },
-      { from: 'client', text: '出事了。' },
+      { from: 'system', text: '【IT 部通知】今日 15:00 机房检修，可能断电，请随时保存文件。' },
+      { from: 'client', text: '辛苦，出事了。' },
       { from: 'client', text: '我把文件发印刷厂，发成你那个「专业版」了。' },
       { from: 'client', text: '5 万册，已经开机了。' },
-      { from: 'client', text: '你能不能跟公司说——专业版就是最终版？' },
+      { from: 'client', text: '你能不能跟公司说——专业版就是最终版？拜托拜托 🙏' },
     ],
     canvas: { logoSize: 30, proVersion: true },
     options: [
+      SAVE_OPTION,
       {
         id: 'C1',
         label: '背锅：承认专业版是最终版',
@@ -174,21 +215,20 @@ export const rounds: Record<string, Round> = {
         flags: { trust: true },
         reactions: [
           { from: 'me', text: '……对，那版就是最终版。我最后改过。' },
-          { from: 'client', text: '兄弟！够意思！尾款下周就打！' },
+          { from: 'client', text: '兄弟！够意思！尾款下周就打！请你吃鸡腿！' },
           { from: 'director', text: '（私聊）印出来的那版，居然能看。' },
-          { from: 'director', text: '……你什么时候做的这版？' },
+          { from: 'director', text: '（私聊）……你什么时候做的这版？' },
         ],
       },
       {
         id: 'C2',
         label: '说实话：是客户自己发错的',
         sub: '凭什么我背',
-        flags: { complaint: true },
+        death: 'honest',
         reactions: [
           { from: 'me', text: '文件管理是贵司的问题，我发的版本没有问题。' },
-          { from: 'client', text: '……行。你等着。' },
-          { from: 'director', text: '（私聊）客户投诉你了，说你「文件管理混乱」。' },
-          { from: 'director', text: '我帮你压下来了。下不为例。' },
+          { from: 'client', text: '……好的，知道了。' },
+          { from: 'system', text: '十分钟后，李总给你们总监 Ray 打了个电话。' },
         ],
       },
       {
@@ -198,9 +238,9 @@ export const rounds: Record<string, Round> = {
         flags: { money: true },
         reactions: [
           { from: 'me', text: '可以。但这是「版本管理服务」，加 20%。' },
-          { from: 'client', text: '你！……行。但这件事到此为止。' },
+          { from: 'client', text: '你！……行，行吧。但这件事到此为止。' },
           { from: 'director', text: '（私聊）客户主动给你加了预算？' },
-          { from: 'director', text: '你怎么办到的？？' },
+          { from: 'director', text: '（私聊）你怎么办到的？？' },
         ],
       },
     ],
@@ -214,7 +254,7 @@ export const rounds: Record<string, Round> = {
       { from: 'system', text: '【公司通知 · 全员】' },
       { from: 'system', text: '即日起，客户反馈统一接入「智稿 AI」自动改稿，平均响应 5 分钟。' },
       { from: 'system', text: '请设计师将源文件整理归档。今后，以 AI 输出为准。' },
-      { from: 'client', text: '在吗？' },
+      { from: 'client', text: '在吗辛苦啦？' },
       { from: 'client', text: '那个 Logo……' },
       { from: 'client', text: '再大一点。', hot: true },
     ],
@@ -224,11 +264,11 @@ export const rounds: Record<string, Round> = {
         label: '把需求喂给 AI，5 分钟交稿',
         sub: '服从系统，准点下班',
         canvas: { logoSize: 100, aiVersion: true, slogan: false, productInLogo: false, proVersion: false },
-        ending: 'ai',
+        death: 'ai',
         reactions: [
           { from: 'system', text: '智稿 AI 已交付。客户评分：★★★★★' },
           { from: 'director', text: '（私聊）这单子以后就归 AI 管了。' },
-          { from: 'director', text: '你今天……什么都没做，对吧。' },
+          { from: 'director', text: '（私聊）你今天……什么都没做，对吧。' },
         ],
       },
       {
@@ -241,7 +281,7 @@ export const rounds: Record<string, Round> = {
           { from: 'me', text: '（你关掉 AI，把 Logo 放回 45%，让产品重新呼吸。）' },
           { from: 'client', text: '这版……怎么感觉不一样了？说不上来。' },
           { from: 'director', text: '（私聊）这版比 AI 好。' },
-          { from: 'director', text: '别说是你做的。系统会判定你「效率低下」。' },
+          { from: 'director', text: '（私聊）别说是你做的。系统会判定你「效率低下」。' },
         ],
       },
       {
@@ -251,11 +291,11 @@ export const rounds: Record<string, Round> = {
         zip: true,
         ending: 'chaos',
         reactions: [
-          { from: 'me', text: '（附件：海报_v1.zip …… 海报_v9_最终_真的最终.zip）' },
+          { from: 'me', text: '（附件：海报_全部版本_你挑一个.zip）' },
           { from: 'client', text: '？？？' },
-          { from: 'client', text: '……你们设计师是不是有病。' },
+          { from: 'client', text: '……你们设计师是不是有病。辛苦啦！' },
           { from: 'director', text: '（私聊）哈哈哈哈哈哈' },
-          { from: 'director', text: '截图发我，我要留档。' },
+          { from: 'director', text: '（私聊）截图发我，我要留档。' },
           { from: 'client', text: '等等。第 7 版是谁做的？就要那个。' },
           { from: 'system', text: '第 7 版，是你最初的那版专业稿。' },
         ],
@@ -301,30 +341,25 @@ export const zipFiles: string[] = [
 
 export const zipName = '海报_全部版本_你挑一个.zip'
 
+// ─────────────────────── 生存结局 ───────────────────────
+
 export interface Ending {
   title: string
   lines: ChatMsg[]
 }
 
 export const endings: Record<string, Ending> = {
-  ai: {
-    title: '结局 · 高效牛马',
-    lines: [
-      { from: 'system', text: '设计师季度绩效评估：协作度优秀，效率提升 340%。' },
-      { from: 'director', text: '（私聊）恭喜你，成功把自己训练成了 AI 的操作员。' },
-    ],
-  },
   hand: {
     title: '结局 · 未被预设的一版',
     lines: [
       { from: 'director', text: '（私聊）你身上那种不可预测的东西，是 AI 替代不了的。' },
-      { from: 'director', text: '继续保持。别声张。' },
+      { from: 'director', text: '（私聊）继续保持。别声张。' },
     ],
   },
   chaos: {
     title: '结局 · 荒诞反击',
     lines: [
-      { from: 'client', text: '下一季新品……还找你。别问为什么。' },
+      { from: 'client', text: '下一季新品……还找你。别问为什么。辛苦啦！' },
       { from: 'director', text: '（私聊）你是我见过的第一个把甲方绕晕的人。' },
     ],
   },
@@ -336,41 +371,16 @@ export const endings: Record<string, Ending> = {
       { from: 'client', text: '在吗？' },
       { from: 'system', text: '你没有回复。' },
       { from: 'director', text: '（私聊）全公司都在猜你为什么已读不回。' },
-      { from: 'director', text: '别解释。他们现在看你的眼神都不一样了。' },
-    ],
-  },
-  // ─── 旗标组合结局：第 3 轮选择 × 过程中做过的事 ───
-  ai_sneaky: {
-    title: '结局 · AI 学会了你的坏毛病',
-    lines: [
-      { from: 'system', text: '智稿AI自主学习通报：已习得「产品图微缩藏入Logo」创新技法，并推广至全平台模板。' },
-      { from: 'director', text: '（私聊）它连这个都学会了。' },
-      { from: 'director', text: '你高兴吗。' },
-    ],
-  },
-  ai_trust: {
-    title: '结局 · AI 解决不了的事',
-    lines: [
-      { from: 'client', text: 'AI 出图是快。' },
-      { from: 'client', text: '但上次印刷厂那事，AI 可救不了我。' },
-      { from: 'client', text: '以后正经事，我还找你。' },
-    ],
-  },
-  ai_money: {
-    title: '结局 · AI 时代的包租公',
-    lines: [
-      { from: 'client', text: '那个 20%「版本管理费」，我照付。' },
-      { from: 'client', text: '万一哪天 AI 把文件发错了呢。' },
-      { from: 'director', text: '（私聊）你可能是全公司唯一一个，因为 AI 上线反而涨薪的人。' },
+      { from: 'director', text: '（私聊）别解释。他们现在看你的眼神都不一样了。' },
     ],
   },
   hand_trust: {
     title: '结局 · 甲方的自己人',
     lines: [
       { from: 'client', text: '以后我们的单子，不要用那个 AI。' },
-      { from: 'client', text: '就要你亲手做的。' },
+      { from: 'client', text: '就要你亲手做的。辛苦啦！' },
       { from: 'director', text: '（私聊）恭喜，你有了「客户指定」待遇。' },
-      { from: 'director', text: '这待遇，AI 抢不走。' },
+      { from: 'director', text: '（私聊）这待遇，AI 抢不走。' },
     ],
   },
   hand_money: {
@@ -383,15 +393,9 @@ export const endings: Record<string, Ending> = {
   },
 }
 
-/** 结局 = 第 3 轮选择 × 过程旗标，按优先级命中组合结局 */
+/** 生存结局 = 第 3 轮选择 × 过程旗标 */
 export function resolveEnding(choice: string, flags: Record<string, boolean>): string {
   if (choice === 'ignore') return 'ignore'
-  if (choice === 'ai') {
-    if (flags.sneaky) return 'ai_sneaky'
-    if (flags.trust) return 'ai_trust'
-    if (flags.money) return 'ai_money'
-    return 'ai'
-  }
   if (choice === 'hand') {
     if (flags.trust) return 'hand_trust'
     if (flags.money) return 'hand_money'
@@ -400,13 +404,50 @@ export function resolveEnding(choice: string, flags: Record<string, boolean>): s
   return 'chaos'
 }
 
+// ─────────────── 毕业死法：菜鸟设计师的一万种死法 ───────────────
+
+export interface Death {
+  no: string
+  title: string
+  /** 写在《解除劳动合同通知书》上的死因 */
+  reason: string
+}
+
+export const deaths: Record<string, Death> = {
+  reason: {
+    no: 'No.001',
+    title: '讲道理死',
+    reason: '试图教甲方做人。李总投诉你「服务态度恶劣」，公司决定「优化」你。',
+  },
+  leapfrog: {
+    no: 'No.002',
+    title: '越级死',
+    reason: '你绕开李总直接联系了他老板。没人告诉你，老板和李总是高中同学。',
+  },
+  honest: {
+    no: 'No.003',
+    title: '诚实死',
+    reason: '你在乙方行业说了真话。李总当即终止合作，公司把你推出去祭天。',
+  },
+  blackout: {
+    no: 'No.004',
+    title: '断电死',
+    reason: 'IT 部明明提醒过你的。海报_v9.psd 未保存。你对 Ctrl+S 的力量一无所知。',
+  },
+  ai: {
+    no: 'No.005',
+    title: 'AI 死',
+    reason: '你把一切都喂给了 AI。经评估，你的岗位已无存续必要。',
+  },
+}
+
 // 过程中攒下的"债务"，在结尾一并结算
 export function flagEpilogues(flags: Record<string, boolean>): string[] {
   const out: string[] = []
   if (flags.twoVersions) out.push('你做的两个版本，改变了这一天的走向。')
   if (flags.trust) out.push('李总欠你一个人情。这个人情比尾款值钱。')
   if (flags.money) out.push('你用荒诞给自己涨了价。')
-  if (flags.complaint) out.push('你的档案里多了一条投诉，也多了一条骨气。')
   if (flags.sneaky) out.push('那个指甲盖大小的产品图，还藏在 Logo 里。')
+  if (flags.saved) out.push('你保存了文件。你今天战胜了这个行业 80% 的意外。')
   return out
 }

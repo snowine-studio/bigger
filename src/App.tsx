@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   rounds,
   endings,
+  deaths,
   nextRoundId,
   deliveryFiles,
   zipFiles,
@@ -128,7 +129,29 @@ function MuteBtn() {
   )
 }
 
-type Phase = 'intro' | 'playing' | 'ending'
+type Phase = 'intro' | 'offer' | 'playing' | 'interlude' | 'ending' | 'death'
+
+// 死法图鉴（localStorage）
+const DEATHS_KEY = 'zdyld_deaths'
+function getUnlockedDeaths(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DEATHS_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+function unlockDeath(id: string): string[] {
+  const list = getUnlockedDeaths()
+  if (!list.includes(id)) {
+    list.push(id)
+    try {
+      localStorage.setItem(DEATHS_KEY, JSON.stringify(list))
+    } catch {
+      /* 隐私模式忽略 */
+    }
+  }
+  return list
+}
 
 const MSG_DELAY = 800 // 消息逐条弹出间隔（初玩者节奏）
 
@@ -140,8 +163,8 @@ const speakerMeta: Record<Speaker, { name: string; bubble: string; align: string
     align: 'justify-start',
     avatar: '甲',
   },
-  // 阿May = 设计师世界：维持冷淡正常，她的"正常"就是对比
-  director: { name: '总监 · 阿May（私聊）', bubble: 'bg-violet-900/60 border-violet-700/50 text-zinc-100', align: 'justify-start', avatar: '监' },
+  // Ray = 设计师世界：维持冷淡正常，他的"正常"就是对比
+  director: { name: '总监 · Ray（私聊）', bubble: 'bg-violet-900/60 border-violet-700/50 text-zinc-100', align: 'justify-start', avatar: 'R' },
   system: { name: '系统', bubble: 'bg-zinc-800/80 border-zinc-600/50 text-zinc-300 italic', align: 'justify-center', avatar: '' },
   me: { name: '你', bubble: 'bg-[#ff2e88] text-white border-[3px] border-black shadow-[4px_4px_0_#1e50a2] rotate-[0.6deg] font-bold rounded-lg', align: 'justify-end', avatar: '我' },
 }
@@ -237,7 +260,11 @@ function Poster({ c, big = false }: { c: CanvasState; big?: boolean }) {
           >
             <div className="absolute left-1/2 -translate-x-1/2 -top-[4.5cqw] w-[10cqw] h-[5cqw] bg-[#0d9488]" style={{ border: '1cqw solid #000' }} />
             <div className="absolute inset-x-[2.5cqw] top-[11cqw] h-[12cqw] bg-white flex items-center justify-center" style={{ border: '0.8cqw solid #000' }}>
-              <span className="font-black text-black tracking-widest" style={{ fontSize: '3.4cqw' }}>PRODUCT</span>
+              <span className="font-black text-black tracking-widest text-center leading-tight" style={{ fontSize: '3cqw' }}>
+                富硒
+                <br />
+                养生杯
+              </span>
             </div>
           </div>
         </div>
@@ -311,6 +338,7 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [canNext, setCanNext] = useState(false)
   const [endingId, setEndingId] = useState<string | null>(null)
+  const [deathId, setDeathId] = useState<string | null>(null)
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
@@ -402,6 +430,7 @@ export default function App() {
     setFlags({})
     setCanvas(initialCanvas)
     setEndingId(null)
+    setDeathId(null)
     setTakeover(false)
     setZipFx(false)
     lastChosenRef.current = ''
@@ -418,11 +447,18 @@ export default function App() {
     if (opt.flags) setFlags(mergedFlags)
 
     const afterReactions = () => {
+      if (opt.death) {
+        setDeathId(opt.death)
+        setBusy(false)
+        setCanNext(false)
+        setPhase('death')
+        return
+      }
       if (opt.ending) {
         setEndingId(resolveEnding(opt.ending, mergedFlags))
         setBusy(false)
         setCanNext(false)
-        setPhase('ending')
+        setPhase('interlude')
         return
       }
       if (opt.funnel) {
@@ -464,6 +500,12 @@ export default function App() {
   const goNext = () => {
     const next = nextRoundId(roundId, lastChosenRef.current)
     if (!next) return
+    // 第 2 轮没保存就交付 → 机房断电，毕业
+    if ((roundId === 'r2A' || roundId === 'r2C') && !flags.saved) {
+      setDeathId('blackout')
+      setPhase('death')
+      return
+    }
     // 剧情内动作：先把稿子发出去，新需求自己找上门
     sfx.send() // 嗖～发过去
     setBusy(true)
@@ -472,6 +514,14 @@ export default function App() {
 
   const epilogues = flagEpilogues(flags)
   const ending = endingId ? endings[endingId] : null
+  const death = deathId ? deaths[deathId] : null
+
+  // 过场卡：「当天晚上 23:47」黑场 2 秒后进入结局
+  useEffect(() => {
+    if (phase !== 'interlude') return
+    const t = setTimeout(() => setPhase('ending'), 2100)
+    return () => clearTimeout(t)
+  }, [phase])
 
   // ─────────────── 开场 ───────────────
   if (phase === 'intro') {
@@ -492,7 +542,7 @@ export default function App() {
           onClick={() => {
             sfx.stopBgm()
             sfx.click()
-            startGame()
+            setPhase('offer')
           }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
@@ -503,32 +553,126 @@ export default function App() {
     )
   }
 
-  // ─────────────── 结局 ───────────────
+  // ─────────────── 录用通知书（前情提要） ───────────────
+  if (phase === 'offer') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-6">
+        <div className="max-w-md w-full bg-white text-black border-4 border-black shadow-[10px_10px_0_#e60012] p-6 relative animate-[fadeIn_.5s_ease]">
+          <div className="text-center font-black text-xl tracking-[0.3em] border-b-2 border-black pb-3">录用通知书</div>
+          <div className="mt-4 space-y-3 text-sm leading-relaxed">
+            <p>经评估，我司认为你的作品集<strong>极具潜力</strong>，决定录用你为设计师（试用期）。</p>
+            <p className="text-zinc-500 text-xs">（你的作品集包含：课堂作业 ×3、表情包合集 ×1、给亲戚店里做的招牌 ×1）</p>
+            <p className="text-zinc-500 text-xs">（但 HR 说：就是看重你的潜力）</p>
+            <p className="font-bold">你高兴了一整晚。</p>
+          </div>
+          <div className="mt-4 flex items-end justify-between">
+            <div className="text-xs text-zinc-500">
+              宏图伟业广告有限公司
+              <br />
+              人力资源部
+            </div>
+            <div className="w-16 h-16 rounded-full border-4 border-[#e60012] text-[#e60012] flex items-center justify-center font-black text-sm rotate-[-12deg]">录用</div>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            startGame()
+          }}
+          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1e50a2] transition-all"
+        >
+          接受 offer，明天入职 →
+        </button>
+        <MuteBtn />
+      </div>
+    )
+  }
+
+  // ─────────────── 过场卡 ───────────────
+  if (phase === 'interlude') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-zinc-500 text-sm tracking-[0.5em] animate-[fadeIn_1.2s_ease]">当天晚上 23:47</div>
+      </div>
+    )
+  }
+
+  // ─────────────── 毕业（死亡画面：解除劳动合同通知书） ───────────────
+  if (phase === 'death' && death) {
+    const unlocked = unlockDeath(deathId!)
+    const total = Object.keys(deaths).length
+    return (
+      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-6">
+        <div className="max-w-md w-full bg-white text-black border-4 border-black shadow-[10px_10px_0_#52525b] p-6 relative animate-[fadeIn_.5s_ease]">
+          <div className="text-center font-black text-lg tracking-[0.2em] border-b-2 border-black pb-3">解除劳动合同通知书</div>
+          <div className="mt-4 space-y-3 text-sm leading-relaxed">
+            <p className="font-black text-base">{death.title}</p>
+            <p>{death.reason}</p>
+            <p className="text-zinc-500 text-xs">经公司研究决定，即日起与你解除劳动合同。工位与门禁卡将于今日回收。</p>
+          </div>
+          <div className="mt-4 flex items-end justify-between">
+            <div className="text-xs text-zinc-500">
+              宏图伟业广告有限公司
+              <br />
+              人力资源部
+            </div>
+            <div className="w-16 h-16 rounded-full border-4 border-[#52525b] text-[#52525b] flex items-center justify-center font-black text-sm rotate-[-12deg]">毕业</div>
+          </div>
+        </div>
+        <div className="text-xs text-zinc-500 tracking-widest">
+          菜鸟设计师的一万种死法 · {death.no}　｜　图鉴 {unlocked.length} / {total}
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setDeathId(null)
+            setPhase('offer')
+          }}
+          className="px-10 py-4 bg-rose-400 text-black border-[3px] border-black font-black tracking-widest shadow-[6px_6px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#000] transition-all"
+        >
+          重新投简历 →
+        </button>
+        <MuteBtn />
+      </div>
+    )
+  }
+
+  // ─────────────── 结局（活过了 DAY 1） ───────────────
   if (phase === 'ending' && ending) {
     return (
       <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
-        <div className="text-xs tracking-[0.5em] text-zinc-500">DAY 1 结束</div>
-        <div className="newugly-ending select-none text-center">{ending.title}</div>
+        <div className="text-xs tracking-[0.5em] text-zinc-500 animate-[fadeIn_.5s_ease]">DAY 1 · 你活下来了</div>
         <div className="max-w-lg w-full space-y-3 mt-2">
           {ending.lines.map((m, i) => (
-            <ChatBubble key={i} msg={m} />
+            <div key={i} className="animate-[fadeIn_.4s_ease_both]" style={{ animationDelay: `${0.4 + i * 0.75}s` }}>
+              <ChatBubble msg={m} />
+            </div>
           ))}
         </div>
+        <div className="newugly-ending select-none text-center animate-[fadeIn_.5s_ease_both]" style={{ animationDelay: `${0.6 + ending.lines.length * 0.75}s` }}>
+          {ending.title}
+        </div>
         {epilogues.length > 0 && (
-          <div className="max-w-lg w-full mt-4 border-2 border-black bg-white text-black p-4 space-y-1 shadow-[6px_6px_0_#e60012]">
+          <div
+            className="max-w-lg w-full mt-2 border-2 border-black bg-white text-black p-4 space-y-1 shadow-[6px_6px_0_#e60012] animate-[fadeIn_.5s_ease_both]"
+            style={{ animationDelay: `${1.1 + ending.lines.length * 0.75}s` }}
+          >
             <div className="text-xs text-zinc-500 mb-2">这一天留下的痕迹：</div>
             {epilogues.map((e, i) => (
               <div key={i} className="text-sm font-bold">· {e}</div>
             ))}
           </div>
         )}
-        <div className="text-zinc-600 text-sm mt-2">DAY 2（待续）</div>
+        <div className="text-zinc-600 text-sm mt-2 animate-[fadeIn_.5s_ease_both]" style={{ animationDelay: `${1.5 + ending.lines.length * 0.75}s` }}>
+          DAY 2（待续）
+        </div>
         <button
           onClick={() => {
             sfx.click()
             startGame()
           }}
-          className="px-8 py-3 bg-[#ffe800] text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1e50a2] transition-all"
+          className="px-8 py-3 bg-[#ffe800] text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1e50a2] transition-all animate-[fadeIn_.5s_ease_both]"
+          style={{ animationDelay: `${1.7 + ending.lines.length * 0.75}s` }}
         >
           再过一遍 DAY 1
         </button>
