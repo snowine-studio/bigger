@@ -88,7 +88,7 @@ function Poster({ c }: { c: CanvasState }) {
   const pro = c.proVersion && !c.aiVersion
   return (
     <div
-      className={`relative w-full max-w-[200px] md:max-w-none aspect-[3/4] max-h-full overflow-hidden border-[3px] border-black shadow-[6px_6px_0_#000] transition-colors duration-700 ${
+      className={`relative w-full max-w-[18vh] md:max-w-none aspect-[3/4] max-h-full overflow-hidden border-[3px] border-black shadow-[6px_6px_0_#000] transition-colors duration-700 ${
         pro ? 'bg-[#f4efe4]' : 'bg-[#ffd23f]'
       }`}
       style={{ containerType: 'inline-size' }}
@@ -388,15 +388,15 @@ export default function App() {
   // ─────────────── 游戏主界面 ───────────────
   const round = rounds[roundId]
   return (
-    <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
       <header className="shrink-0 flex items-center justify-between px-5 py-3 bg-black border-b-[3px] border-[#ffe800]">
         <div className="font-black tracking-widest text-[#ffe800] text-lg" style={{ textShadow: '2px 2px 0 #e60012' }}>再大一点</div>
         <div className="text-xs text-zinc-500 font-bold">DAY 1 · {round.label}</div>
       </header>
 
-      <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_1.1fr_1fr] gap-3 p-3 min-h-0 overflow-y-auto md:overflow-hidden">
-        {/* 左：需求聊天（点按可快进） */}
-        <section className="flex flex-col min-h-[40vh] md:min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
+      <main className="flex-1 flex flex-col md:grid md:grid-cols-[1fr_1.1fr_1fr] gap-2 md:gap-3 p-2 md:p-3 min-h-0 overflow-hidden">
+        {/* 左：需求聊天（点按可快进）；手机端弹性收缩，内部滚动 */}
+        <section className="flex flex-col flex-1 min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500 flex justify-between">
             <span>需求 / 私聊</span>
             {busy && <span className="text-zinc-600">点按可快进</span>}
@@ -409,19 +409,19 @@ export default function App() {
           </div>
         </section>
 
-        {/* 中：设计稿 */}
-        <section className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40 p-3">
-          <div className="shrink-0 text-xs text-zinc-500 pb-2 flex justify-between">
+        {/* 中：设计稿（手机端缩小固定，不挤占聊天与选项） */}
+        <section className="flex flex-col shrink-0 md:shrink md:min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40 p-2 md:p-3">
+          <div className="shrink-0 text-xs text-zinc-500 pb-1 md:pb-2 flex justify-between">
             <span>设计稿 · 海报.psd</span>
             <span className="font-mono">Logo 占比 {canvas.logoSize}%</span>
           </div>
-          <div className="flex-1 min-h-0 flex items-center justify-center">
+          <div className="flex-1 min-h-0 flex items-center justify-center max-h-[24vh] md:max-h-none">
             <Poster c={canvas} />
           </div>
         </section>
 
-        {/* 右：操作（手机端两列平铺，全部露出） */}
-        <section ref={optionsBox} className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
+        {/* 右：操作（手机端两列平铺钉在底部，全部露出） */}
+        <section ref={optionsBox} className="flex flex-col shrink-0 md:shrink md:min-h-0 max-h-[36vh] md:max-h-none rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500">你的操作</div>
           <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3 content-start">
             {available.map((o, i) => {
