@@ -27,7 +27,7 @@ const speakerMeta: Record<Speaker, { name: string; bubble: string; align: string
   // 阿May = 设计师世界：维持冷淡正常，她的"正常"就是对比
   director: { name: '总监 · 阿May（私聊）', bubble: 'bg-violet-900/60 border-violet-700/50 text-zinc-100', align: 'justify-start', avatar: '监' },
   system: { name: '系统', bubble: 'bg-zinc-800/80 border-zinc-600/50 text-zinc-300 italic', align: 'justify-center', avatar: '' },
-  me: { name: '你', bubble: 'bg-white text-black border-2 border-black', align: 'justify-end', avatar: '我' },
+  me: { name: '你', bubble: 'bg-[#ff2e88] text-white border-[3px] border-black shadow-[4px_4px_0_#1e50a2] rotate-[0.6deg] font-bold rounded-lg', align: 'justify-end', avatar: '我' },
 }
 
 function Avatar({ s }: { s: Speaker }) {
@@ -75,53 +75,102 @@ function Marquee({ className = '', reverse = false }: { className?: string; reve
   )
 }
 
-/** 中间画布：一张海报，Logo 会长大 */
+/** 中间画布：一张新丑风海报，Logo 会长大 */
 function Poster({ c }: { c: CanvasState }) {
+  // proVersion = 设计师亲手改的那版：丑得有章法，一眼"不一样"
+  const pro = c.proVersion && !c.aiVersion
   return (
-    <div className="relative w-full max-w-[200px] md:max-w-none aspect-[3/4] max-h-full rounded-lg overflow-hidden border border-zinc-600 bg-gradient-to-b from-orange-100 to-amber-50 shadow-2xl">
-      {/* 产品图（被 Logo 挡住时仍然渲染在底层） */}
+    <div
+      className={`relative w-full max-w-[200px] md:max-w-none aspect-[3/4] max-h-full overflow-hidden border-[3px] border-black shadow-[6px_6px_0_#000] transition-colors duration-700 ${
+        pro ? 'bg-[#f4efe4]' : 'bg-[#ffd23f]'
+      }`}
+      style={{ containerType: 'inline-size' }}
+    >
+      {/* 顶部黑条密排小字（新丑标配） */}
       {!c.aiVersion && (
-        <div className="absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 w-[26%] h-[34%]">
-          <div className="w-full h-full rounded-t-3xl rounded-b-lg bg-gradient-to-b from-teal-500 to-teal-700 shadow-lg relative">
-            <div className="absolute left-1/2 -translate-x-1/2 -top-[12%] w-[40%] h-[14%] rounded bg-teal-800" />
-            <div className="absolute inset-x-2 top-[30%] h-[30%] rounded bg-white/85 flex items-center justify-center">
-              <span className="text-[0.55rem] font-bold text-teal-800 tracking-widest">PRODUCT</span>
+        <div className="absolute top-0 inset-x-0 bg-black text-[#ffd23f] font-black px-1 py-[1cqw] whitespace-nowrap overflow-hidden z-10" style={{ fontSize: '3.2cqw', letterSpacing: '0.25em' }}>
+          NEW ARRIVAL ✦ 2026 春季新品 ✦ NEW ARRIVAL ✦ 2026 春季新品 ✦ NEW ARRIVAL
+        </div>
+      )}
+
+      {/* 巨型裁切黑字（pro 版收敛为规整小字） */}
+      {!c.aiVersion && !pro && (
+        <div className="absolute left-[-4cqw] top-[10cqw] font-black text-black leading-none select-none" style={{ fontSize: '30cqw', transform: 'rotate(-6deg)' }}>
+          新品
+        </div>
+      )}
+      {pro && (
+        <div className="absolute left-[6cqw] top-[9cqw] font-black text-black leading-none select-none" style={{ fontSize: '9cqw', letterSpacing: '0.3em' }}>
+          新品上市
+        </div>
+      )}
+
+      {/* 产品图：平涂撞色 + 粗黑描边 + 硬阴影 */}
+      {!c.aiVersion && (
+        <div className="absolute left-1/2 top-[64%] -translate-x-1/2 -translate-y-1/2 w-[26cqw] h-[36cqw]">
+          <div
+            className="w-full h-full bg-[#0d9488] relative"
+            style={{ border: '1cqw solid #000', boxShadow: '2cqw 2cqw 0 #e60012', borderRadius: '6cqw 6cqw 1.5cqw 1.5cqw' }}
+          >
+            <div className="absolute left-1/2 -translate-x-1/2 -top-[4.5cqw] w-[10cqw] h-[5cqw] bg-[#0d9488]" style={{ border: '1cqw solid #000' }} />
+            <div className="absolute inset-x-[2.5cqw] top-[11cqw] h-[12cqw] bg-white flex items-center justify-center" style={{ border: '0.8cqw solid #000' }}>
+              <span className="font-black text-black tracking-widest" style={{ fontSize: '3.4cqw' }}>PRODUCT</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Logo：核心笑点，带过渡动画地长大 */}
+      {/* Logo：白椭圆贴纸标，带过渡动画地长大 */}
       <div
-        className="absolute left-1/2 top-[6%] -translate-x-1/2 bg-zinc-800 rounded-sm shadow-xl flex items-center justify-center transition-all duration-700 ease-in-out z-10"
-        style={{ width: `${c.logoSize}%`, aspectRatio: '1/1' }}
+        className="absolute left-1/2 top-[7%] -translate-x-1/2 bg-white flex items-center justify-center transition-all duration-700 ease-in-out z-10"
+        style={{
+          width: `${c.logoSize}%`,
+          aspectRatio: '1/1',
+          borderRadius: '50%',
+          border: '1.2cqw solid #000',
+          boxShadow: '1.5cqw 1.5cqw 0 #000',
+        }}
       >
-        <span
-          className="font-black text-zinc-100 tracking-tight transition-all duration-700"
-          style={{ fontSize: `clamp(10px, ${c.logoSize * 0.28}px, 64px)` }}
-        >
+        <span className="font-black text-black tracking-tight transition-all duration-700" style={{ fontSize: `${c.logoSize * 0.24}cqw` }}>
           LOGO
         </span>
         {c.productInLogo && (
-          <div className="absolute right-[4%] bottom-[4%] w-[10%] h-[14%] rounded-t-md rounded-b-sm bg-teal-600" />
+          <div className="absolute right-[6%] bottom-[6%] w-[10%] h-[14%] bg-[#0d9488]" style={{ border: '0.5cqw solid #000', borderRadius: '1cqw 1cqw 0.3cqw 0.3cqw' }} />
         )}
       </div>
 
+      {/* 红色爆炸贴（pro 版摘掉） */}
+      {!c.aiVersion && !pro && (
+        <div
+          className="absolute right-[4%] top-[38%] bg-[#e60012] text-[#ffe800] font-black flex items-center justify-center z-10"
+          style={{ width: '18cqw', height: '18cqw', fontSize: '6cqw', border: '1cqw solid #000', transform: 'rotate(14deg)', clipPath: 'polygon(50% 0%,61% 12%,75% 6%,80% 20%,94% 21%,93% 36%,100% 46%,93% 58%,97% 72%,85% 78%,82% 93%,68% 90%,58% 100%,48% 90%,34% 95%,29% 81%,14% 80%,17% 65%,6% 55%,15% 44%,10% 30%,24% 28%,30% 14%,42% 20%)' }}
+        >
+          必买!
+        </div>
+      )}
+
+      {/* 底部密排小字（新丑标配） */}
+      {!c.aiVersion && (
+        <div className="absolute bottom-[1.5cqw] inset-x-[3cqw] text-black font-bold leading-tight z-0" style={{ fontSize: '2.6cqw' }}>
+          本品由设计师在凌晨两点精心编排　成分：大气 30%　高级感 20%　国际视野 15%　玄学 35%　未经授权禁止缩小Logo　最终解释权归甲方所有
+        </div>
+      )}
+
       {c.slogan && (
-        <div className="absolute bottom-[5%] inset-x-0 text-center z-20">
-          <span className="text-lg font-black bg-gradient-to-r from-yellow-300 via-amber-500 to-yellow-300 bg-clip-text text-transparent animate-pulse drop-shadow-[0_0_6px_rgba(250,204,21,.8)]">
-            ✦ 行业领导者 ✦
+        <div className="absolute bottom-[9cqw] inset-x-0 text-center z-20">
+          <span className="font-black text-[#ffe800] bg-[#e60012] px-[2cqw] py-[0.5cqw] animate-pulse" style={{ fontSize: '7cqw', border: '1cqw solid #000', boxShadow: '1cqw 1cqw 0 #000' }}>
+            ★ 行业领导者 ★
           </span>
         </div>
       )}
 
       {c.aiVersion && (
-        <div className="absolute bottom-2 right-2 z-20 text-[10px] font-mono bg-black/70 text-green-400 px-2 py-1 rounded">
+        <div className="absolute bottom-2 right-2 z-20 font-mono bg-black text-green-400 px-2 py-1" style={{ fontSize: '3cqw', border: '0.5cqw solid #ffe800' }}>
           GENERATED BY 智稿AI · 5min
         </div>
       )}
-      {c.proVersion && !c.aiVersion && (
-        <div className="absolute bottom-2 right-2 z-20 text-[10px] font-mono bg-black/70 text-zinc-300 px-2 py-1 rounded">
+      {pro && (
+        <div className="absolute bottom-[6cqw] right-[3cqw] z-20 font-mono bg-black text-[#f4efe4] px-2 py-1" style={{ fontSize: '3cqw' }}>
           v_专业版.psd
         </div>
       )}
