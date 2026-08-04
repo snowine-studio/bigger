@@ -16,10 +16,10 @@ import {
 } from './game/script'
 import * as sfx from './game/audio'
 
-/** 打包 zip 全屏动画：文件逐个弹出 → 压成 zip → 盖章发送 → 点按继续 */
+/** 打包 zip 三段式：看文件（停留）→ 点打包压成 zip → 点发送嗖地飞走 */
 function ZipOverlay({ onDone }: { onDone: () => void }) {
   const [shown, setShown] = useState(0)
-  const [zipped, setZipped] = useState(false)
+  const [stage, setStage] = useState<'list' | 'zipping' | 'zipped' | 'sent'>('list')
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -35,23 +35,34 @@ function ZipOverlay({ onDone }: { onDone: () => void }) {
     return () => clearInterval(iv)
   }, [])
 
-  useEffect(() => {
-    if (shown >= zipFiles.length && !zipped) {
-      const t = setTimeout(() => {
-        setZipped(true)
-        sfx.stamp()
-      }, 380)
-      return () => clearTimeout(t)
-    }
-  }, [shown, zipped])
+  const allShown = shown >= zipFiles.length
+
+  const doZip = () => {
+    sfx.click()
+    setStage('zipping')
+    setTimeout(() => {
+      setStage('zipped')
+      sfx.stamp()
+    }, 450)
+  }
+
+  const doSend = () => {
+    sfx.send()
+    setStage('sent')
+  }
 
   return (
     <div
-      onClick={() => zipped && onDone()}
-      className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center gap-2 p-6 cursor-pointer"
+      onClick={() => stage === 'sent' && onDone()}
+      className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center gap-3 p-6"
     >
-      {!zipped ? (
-        <div className="w-full max-w-md space-y-1.5">
+      {/* 文件列表：zipping 时整体收缩消失 */}
+      {(stage === 'list' || stage === 'zipping') && (
+        <div
+          className={`w-full max-w-md space-y-1.5 transition-all duration-500 ${
+            stage === 'zipping' ? 'opacity-0 scale-50 translate-y-8' : ''
+          }`}
+        >
           {zipFiles.slice(0, shown).map((f, i) => (
             <div
               key={i}
@@ -61,13 +72,39 @@ function ZipOverlay({ onDone }: { onDone: () => void }) {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* 阶段按钮 / zip 徽章 */}
+      {stage === 'list' && allShown && (
+        <button
+          onClick={doZip}
+          className="mt-3 px-8 py-3 bg-sky-300 text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#e60012] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#e60012] active:shadow-none transition-all animate-[fadeIn_.3s_ease]"
+        >
+          📦 打包
+        </button>
+      )}
+
+      {stage === 'zipped' && (
         <>
           <div className="bg-[#ffe800] text-black font-black text-base md:text-xl px-6 py-4 border-4 border-black shadow-[8px_8px_0_#e60012] rotate-[-1deg] animate-[fadeIn_.2s_ease]">
             📦 {zipName}
           </div>
-          <div className="text-lime-300 font-black text-sm mt-2 tracking-widest">已发送 ✓</div>
-          <div className="text-zinc-500 text-xs mt-4">点按任意处继续</div>
+          <button
+            onClick={doSend}
+            className="mt-2 px-10 py-3 bg-lime-300 text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#000] active:shadow-none transition-all"
+          >
+            发送给客户 →
+          </button>
+        </>
+      )}
+
+      {stage === 'sent' && (
+        <>
+          <div className="bg-[#ffe800] text-black font-black text-base md:text-xl px-6 py-4 border-4 border-black shadow-[8px_8px_0_#e60012] animate-[flyOff_.55s_ease-in_forwards]">
+            📦 {zipName}
+          </div>
+          <div className="text-lime-300 font-black text-sm mt-6 tracking-widest animate-[fadeIn_.3s_ease_.4s_both]">已发送 ✓</div>
+          <div className="text-zinc-500 text-xs mt-3 animate-[fadeIn_.3s_ease_.7s_both]">点按任意处继续</div>
         </>
       )}
     </div>
@@ -428,7 +465,7 @@ export default function App() {
     const next = nextRoundId(roundId, lastChosenRef.current)
     if (!next) return
     // 剧情内动作：先把稿子发出去，新需求自己找上门
-    sfx.drop() // macOS 式"把文件丢进去"的 plop
+    sfx.send() // 嗖～发过去
     setBusy(true)
     pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
   }

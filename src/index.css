@@ -136,3 +136,15 @@
     transform: translateX(-50%);
   }
 }
+
+/* zip 发送：嗖地飞出屏幕 */
+@keyframes flyOff {
+  from {
+    transform: translate(0, 0) rotate(-1deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(55vw, -60vh) rotate(18deg) scale(0.7);
+    opacity: 0;
+  }
+}

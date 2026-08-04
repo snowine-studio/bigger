@@ -100,6 +100,36 @@ export function pop(speaker: 'client' | 'director' | 'system' | 'me') {
   tone({ type: 'triangle', freq: base * 2, dur: 0.04, gain: 0.03 })
 }
 
+/** 发送文件：嗖～飞走 + 落点的液体 plop */
+export function send() {
+  if (muted) return
+  const c = ac()
+  const t0 = c.currentTime
+  // 嗖：带通噪声上扫
+  if (!noiseBuf) {
+    noiseBuf = c.createBuffer(1, c.sampleRate * 0.5, c.sampleRate)
+    const d = noiseBuf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  }
+  const src = c.createBufferSource()
+  src.buffer = noiseBuf
+  const f = c.createBiquadFilter()
+  f.type = 'bandpass'
+  f.Q.value = 1.2
+  f.frequency.setValueAtTime(400, t0)
+  f.frequency.exponentialRampToValueAtTime(3200, t0 + 0.28)
+  const g = c.createGain()
+  g.gain.setValueAtTime(0.001, t0)
+  g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.08)
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32)
+  src.connect(f).connect(g).connect(out())
+  src.start(t0)
+  src.stop(t0 + 0.4)
+  // 落点 plop
+  tone({ type: 'sine', freq: 340, freqEnd: 130, at: t0 + 0.24, dur: 0.13, gain: 0.3, attack: 0.004 })
+  tone({ type: 'sine', freq: 1300, freqEnd: 900, at: t0 + 0.24, dur: 0.025, gain: 0.05, attack: 0.001 })
+}
+
 /** 发送文件：macOS 式"把文件丢进去"的液体 plop */
 export function drop() {
   if (muted) return
