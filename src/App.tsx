@@ -82,13 +82,13 @@ function Marquee({ className = '', reverse = false }: { className?: string; reve
   )
 }
 
-/** 中间画布：一张新丑风海报，Logo 会长大 */
-function Poster({ c }: { c: CanvasState }) {
+/** 中间画布：一张新丑风海报，Logo 会长大；big=true 时为全屏放大模式 */
+function Poster({ c, big = false }: { c: CanvasState; big?: boolean }) {
   // proVersion = 设计师亲手改的那版：丑得有章法，一眼"不一样"
   const pro = c.proVersion && !c.aiVersion
   return (
     <div
-      className={`relative w-full max-w-[18vh] md:max-w-none aspect-[3/4] max-h-full overflow-hidden border-[3px] border-black shadow-[6px_6px_0_#000] transition-colors duration-700 ${
+      className={`relative w-full ${big ? '' : 'max-w-[18vh] md:max-w-none'} aspect-[3/4] max-h-full overflow-hidden border-[3px] border-black shadow-[6px_6px_0_#000] transition-colors duration-700 ${
         pro ? 'bg-[#f4efe4]' : 'bg-[#ffd23f]'
       }`}
       style={{ containerType: 'inline-size' }}
@@ -196,6 +196,7 @@ export default function App() {
   const [canNext, setCanNext] = useState(false)
   const [endingId, setEndingId] = useState<string | null>(null)
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
+  const [zoomed, setZoomed] = useState(false) // 海报全屏放大
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
   const afterTakeover = useRef<(() => void) | null>(null)
@@ -415,7 +416,11 @@ export default function App() {
             <span>设计稿 · 海报.psd</span>
             <span className="font-mono">Logo 占比 {canvas.logoSize}%</span>
           </div>
-          <div className="flex-1 min-h-0 flex items-center justify-center max-h-[24vh] md:max-h-none">
+          <div
+            className="flex-1 min-h-0 flex items-center justify-center max-h-[24vh] md:max-h-none cursor-zoom-in"
+            onClick={() => setZoomed(true)}
+            title="点按放大"
+          >
             <Poster c={canvas} />
           </div>
         </section>
@@ -459,6 +464,19 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      {/* 海报全屏放大：点一下看细节，再点收起 */}
+      {zoomed && (
+        <div
+          onClick={() => setZoomed(false)}
+          className="fixed inset-0 z-40 bg-black/90 flex flex-col items-center justify-center gap-3 cursor-zoom-out animate-[fadeIn_.2s_ease]"
+        >
+          <div className="w-[min(88vw,68vh)]">
+            <Poster c={canvas} big />
+          </div>
+          <div className="text-zinc-500 text-xs">再点一下收起</div>
+        </div>
+      )}
 
       {/* AI 全屏吞噬：需求越过第四面墙，吃掉游戏本身（点按继续） */}
       {takeover && (
