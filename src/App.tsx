@@ -48,10 +48,17 @@ function ChatBubble({ msg }: { msg: ChatMsg }) {
       </div>
     )
   }
+  // 李总：普通消息白贴纸，核心需求（hot）才是黄色爆炸贴——黄色只当警报用
+  const bubble =
+    msg.from === 'client'
+      ? msg.hot
+        ? speakerMeta.client.bubble
+        : 'bg-white text-black border-[3px] border-black shadow-[4px_4px_0_#000] rotate-[-0.5deg] font-bold rounded-lg'
+      : meta.bubble
   return (
     <div className={`flex gap-2 ${meta.align} animate-[fadeIn_.4s_ease]`}>
       {msg.from !== 'me' && <Avatar s={msg.from} />}
-      <div className={`max-w-[85%] rounded-xl border px-3 py-2 text-sm leading-relaxed ${meta.bubble}`}>
+      <div className={`max-w-[85%] rounded-xl border px-3 py-2 text-sm leading-relaxed ${bubble}`}>
         <div className="text-[10px] opacity-60 mb-0.5">{meta.name}</div>
         {msg.text}
       </div>
@@ -382,9 +389,9 @@ export default function App() {
   const round = rounds[roundId]
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-      <header className="shrink-0 flex items-center justify-between px-5 py-3 border-b-2 border-black bg-[#ffe800]">
-        <div className="font-black tracking-widest text-black text-lg" style={{ textShadow: '2px 2px 0 #e60012' }}>再大一点</div>
-        <div className="text-xs text-black/70 font-bold">DAY 1 · {round.label}</div>
+      <header className="shrink-0 flex items-center justify-between px-5 py-3 bg-black border-b-[3px] border-[#ffe800]">
+        <div className="font-black tracking-widest text-[#ffe800] text-lg" style={{ textShadow: '2px 2px 0 #e60012' }}>再大一点</div>
+        <div className="text-xs text-zinc-500 font-bold">DAY 1 · {round.label}</div>
       </header>
 
       <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_1.1fr_1fr] gap-3 p-3 min-h-0 overflow-y-auto md:overflow-hidden">
@@ -418,12 +425,12 @@ export default function App() {
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500">你的操作</div>
           <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3 content-start">
             {available.map((o, i) => {
-              // 新丑撞色按钮；隐藏选项「已读不回」故意灰扑扑
+              // 新丑撞色按钮（去黄，减少视觉疲劳）；隐藏选项「已读不回」故意灰扑扑
               const palette = [
-                'bg-amber-300 hover:bg-amber-200 shadow-[4px_4px_0_#e60012]',
                 'bg-rose-400 hover:bg-rose-300 shadow-[4px_4px_0_#1e50a2]',
                 'bg-sky-300 hover:bg-sky-200 shadow-[4px_4px_0_#e60012]',
                 'bg-lime-300 hover:bg-lime-200 shadow-[4px_4px_0_#1e50a2]',
+                'bg-fuchsia-300 hover:bg-fuchsia-200 shadow-[4px_4px_0_#e60012]',
               ]
               const color = o.id === 'R3D' ? 'bg-zinc-200 text-zinc-500 shadow-[4px_4px_0_#52525b]' : palette[i % palette.length] + ' text-black'
               return (
@@ -441,7 +448,7 @@ export default function App() {
             {canNext && (
               <button
                 onClick={goNext}
-                className="col-span-2 md:col-span-1 w-full bg-[#e60012] text-[#ffe800] border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#ffe800] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#ffe800] transition-all"
+                className="col-span-2 md:col-span-1 w-full bg-[#e60012] text-[#ffe800] border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#000] transition-all"
               >
                 下一条需求 →
               </button>

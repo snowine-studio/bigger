@@ -6,6 +6,8 @@ export type Speaker = 'client' | 'director' | 'system' | 'me'
 export interface ChatMsg {
   from: Speaker
   text: string
+  /** true = 核心需求警报，黄色爆炸贴 */
+  hot?: boolean
 }
 
 export interface CanvasState {
@@ -55,7 +57,7 @@ export const rounds: Record<string, Round> = {
       { from: 'client', text: '在吗？海报初稿看了。' },
       { from: 'client', text: '整体不错，很有感觉。' },
       { from: 'client', text: '但是吧……不够大气。' },
-      { from: 'client', text: 'Logo，再大一点。' },
+      { from: 'client', text: 'Logo，再大一点。', hot: true },
     ],
     canvas: { logoSize: 30 },
     options: [
@@ -105,7 +107,7 @@ export const rounds: Record<string, Round> = {
     intro: [
       { from: 'system', text: '【新派单 · 加急】客户 · 李总' },
       { from: 'client', text: '在吗？我们老板看到海报了。' },
-      { from: 'client', text: '老板说：Logo 还不够大。' },
+      { from: 'client', text: '老板说：Logo 还不够大。', hot: true },
       { from: 'client', text: '顺便加一句 slogan：「行业领导者」。' },
       { from: 'client', text: '要金色的。会闪的那种。' },
     ],
@@ -212,7 +214,7 @@ export const rounds: Record<string, Round> = {
       { from: 'system', text: '请设计师将源文件整理归档。今后，以 AI 输出为准。' },
       { from: 'client', text: '在吗？' },
       { from: 'client', text: '那个 Logo……' },
-      { from: 'client', text: '再大一点。' },
+      { from: 'client', text: '再大一点。', hot: true },
     ],
     options: [
       {
