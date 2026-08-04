@@ -105,3 +105,34 @@
     font-size: 60vmin;
   }
 }
+
+/* 新丑风：椰树式大标题与跑马灯 */
+.newugly-title {
+  font-size: clamp(64px, 16vw, 150px);
+  font-weight: 900;
+  line-height: 1.1;
+  color: #ffe800;
+  text-shadow:
+    5px 5px 0 #e60012,
+    10px 10px 0 #1e50a2;
+  letter-spacing: 0.08em;
+}
+
+.newugly-ending {
+  font-size: clamp(30px, 6vw, 52px);
+  font-weight: 900;
+  color: #ffe800;
+  text-shadow:
+    3px 3px 0 #e60012,
+    6px 6px 0 #1e50a2;
+  letter-spacing: 0.05em;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

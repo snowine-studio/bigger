@@ -17,10 +17,17 @@ type Phase = 'intro' | 'playing' | 'ending'
 const MSG_DELAY = 800 // 消息逐条弹出间隔（初玩者节奏）
 
 const speakerMeta: Record<Speaker, { name: string; bubble: string; align: string; avatar: string }> = {
-  client: { name: '客户 · 李总', bubble: 'bg-sky-900/70 border-sky-700/60', align: 'justify-start', avatar: '甲' },
-  director: { name: '总监 · 阿May（私聊）', bubble: 'bg-violet-900/60 border-violet-700/50', align: 'justify-start', avatar: '监' },
+  // 李总 = 甲方世界：黄色爆炸贴纸，硬阴影，微微歪斜地拍在屏幕上
+  client: {
+    name: '客户 · 李总',
+    bubble: 'bg-[#ffe800] text-black border-[3px] border-black shadow-[4px_4px_0_#e60012] rotate-[-0.8deg] font-bold rounded-lg',
+    align: 'justify-start',
+    avatar: '甲',
+  },
+  // 阿May = 设计师世界：维持冷淡正常，她的"正常"就是对比
+  director: { name: '总监 · 阿May（私聊）', bubble: 'bg-violet-900/60 border-violet-700/50 text-zinc-100', align: 'justify-start', avatar: '监' },
   system: { name: '系统', bubble: 'bg-zinc-800/80 border-zinc-600/50 text-zinc-300 italic', align: 'justify-center', avatar: '' },
-  me: { name: '你', bubble: 'bg-emerald-900/50 border-emerald-700/50', align: 'justify-end', avatar: '我' },
+  me: { name: '你', bubble: 'bg-white text-black border-2 border-black', align: 'justify-end', avatar: '我' },
 }
 
 function Avatar({ s }: { s: Speaker }) {
@@ -44,11 +51,26 @@ function ChatBubble({ msg }: { msg: ChatMsg }) {
   return (
     <div className={`flex gap-2 ${meta.align} animate-[fadeIn_.4s_ease]`}>
       {msg.from !== 'me' && <Avatar s={msg.from} />}
-      <div className={`max-w-[85%] rounded-xl border px-3 py-2 text-sm leading-relaxed text-zinc-100 ${meta.bubble}`}>
+      <div className={`max-w-[85%] rounded-xl border px-3 py-2 text-sm leading-relaxed ${meta.bubble}`}>
         <div className="text-[10px] opacity-60 mb-0.5">{meta.name}</div>
         {msg.text}
       </div>
       {msg.from === 'me' && <Avatar s={msg.from} />}
+    </div>
+  )
+}
+
+/** 椰树风跑马灯 */
+function Marquee({ className = '', reverse = false }: { className?: string; reverse?: boolean }) {
+  const text = '再大一点 ✦ 大气 ✦ 客户满意 ✦ 行业领导者 ✦ 不够刺激 ✦ 五彩斑斓的黑 ✦ 高级感 ✦ 国际化 ✦ '
+  return (
+    <div className={`absolute left-0 right-0 h-8 bg-[#ffe800] border-y-2 border-black overflow-hidden flex items-center ${className}`}>
+      <div
+        className="whitespace-nowrap font-black text-black text-sm tracking-widest"
+        style={{ animation: `marquee 22s linear infinite ${reverse ? 'reverse' : ''}` }}
+      >
+        {text.repeat(4)}
+      </div>
     </div>
   )
 }
@@ -258,13 +280,18 @@ export default function App() {
   // ─────────────── 开场 ───────────────
   if (phase === 'intro') {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
-        <div className="text-6xl font-black tracking-widest">再大一点</div>
-        <div className="text-zinc-400 text-sm tracking-wide">一个你永远无法满足甲方需求的荒诞选择游戏</div>
-        <div className="text-zinc-600 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
+      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8 relative overflow-hidden">
+        {/* 椰树风跑马灯：上下各一条 */}
+        <Marquee className="top-0" />
+        <Marquee className="bottom-0" reverse />
+        <div className="newugly-title select-none">再大一点</div>
+        <div className="bg-[#1e50a2] text-[#ffe800] font-black text-sm md:text-base px-4 py-1 border-2 border-black shadow-[4px_4px_0_#e60012] rotate-[0.5deg]">
+          一个你永远无法满足甲方需求的荒诞选择游戏
+        </div>
+        <div className="text-zinc-500 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
         <button
           onClick={startGame}
-          className="mt-4 px-10 py-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-lg tracking-widest transition-colors shadow-[0_0_30px_rgba(245,158,11,.35)]"
+          className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
           接单
         </button>
@@ -275,26 +302,26 @@ export default function App() {
   // ─────────────── 结局 ───────────────
   if (phase === 'ending' && ending) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
+      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
         <div className="text-xs tracking-[0.5em] text-zinc-500">DAY 1 结束</div>
-        <div className="text-4xl font-black text-center">{ending.title}</div>
+        <div className="newugly-ending select-none text-center">{ending.title}</div>
         <div className="max-w-lg w-full space-y-3 mt-2">
           {ending.lines.map((m, i) => (
             <ChatBubble key={i} msg={m} />
           ))}
         </div>
         {epilogues.length > 0 && (
-          <div className="max-w-lg w-full mt-4 rounded-xl border border-zinc-700 bg-zinc-900/60 p-4 space-y-1">
+          <div className="max-w-lg w-full mt-4 border-2 border-black bg-white text-black p-4 space-y-1 shadow-[6px_6px_0_#e60012]">
             <div className="text-xs text-zinc-500 mb-2">这一天留下的痕迹：</div>
             {epilogues.map((e, i) => (
-              <div key={i} className="text-sm text-zinc-300">· {e}</div>
+              <div key={i} className="text-sm font-bold">· {e}</div>
             ))}
           </div>
         )}
         <div className="text-zinc-600 text-sm mt-2">DAY 2（待续）</div>
         <button
           onClick={startGame}
-          className="px-8 py-3 rounded-xl border border-amber-500/60 text-amber-400 hover:bg-amber-500/10 font-bold transition-colors"
+          className="px-8 py-3 bg-[#ffe800] text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1e50a2] transition-all"
         >
           再过一遍 DAY 1
         </button>
@@ -306,9 +333,9 @@ export default function App() {
   const round = rounds[roundId]
   return (
     <div className="h-screen bg-zinc-950 text-zinc-100 flex flex-col overflow-hidden">
-      <header className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-zinc-800">
-        <div className="font-black tracking-widest">再大一点</div>
-        <div className="text-xs text-zinc-500">DAY 1 · {round.label}</div>
+      <header className="shrink-0 flex items-center justify-between px-5 py-3 border-b-2 border-black bg-[#ffe800]">
+        <div className="font-black tracking-widest text-black text-lg" style={{ textShadow: '2px 2px 0 #e60012' }}>再大一点</div>
+        <div className="text-xs text-black/70 font-bold">DAY 1 · {round.label}</div>
       </header>
 
       <main className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_1.1fr_1fr] gap-3 p-3 min-h-0 overflow-y-auto md:overflow-hidden">
@@ -341,21 +368,31 @@ export default function App() {
         <section ref={optionsBox} className="flex flex-col min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500">你的操作</div>
           <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 md:grid-cols-1 gap-2 md:gap-3 content-start">
-            {available.map((o) => (
-              <button
-                key={o.id}
-                disabled={busy}
-                onClick={() => chooseTracked(o)}
-                className="w-full text-left rounded-xl border border-zinc-700 bg-zinc-800/60 hover:border-amber-500/70 hover:bg-amber-500/10 disabled:opacity-40 disabled:hover:border-zinc-700 disabled:hover:bg-zinc-800/60 p-3 md:p-4 transition-colors"
-              >
-                <div className="font-bold text-sm leading-snug">{o.label}</div>
-                {o.sub && <div className="text-xs text-zinc-500 mt-1">{o.sub}</div>}
-              </button>
-            ))}
+            {available.map((o, i) => {
+              // 新丑撞色按钮；隐藏选项「已读不回」故意灰扑扑
+              const palette = [
+                'bg-amber-300 hover:bg-amber-200 shadow-[4px_4px_0_#e60012]',
+                'bg-rose-400 hover:bg-rose-300 shadow-[4px_4px_0_#1e50a2]',
+                'bg-sky-300 hover:bg-sky-200 shadow-[4px_4px_0_#e60012]',
+                'bg-lime-300 hover:bg-lime-200 shadow-[4px_4px_0_#1e50a2]',
+              ]
+              const color = o.id === 'R3D' ? 'bg-zinc-200 text-zinc-500 shadow-[4px_4px_0_#52525b]' : palette[i % palette.length] + ' text-black'
+              return (
+                <button
+                  key={o.id}
+                  disabled={busy}
+                  onClick={() => chooseTracked(o)}
+                  className={`w-full text-left border-[3px] border-black p-3 md:p-4 disabled:opacity-40 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all ${color}`}
+                >
+                  <div className="font-black text-sm leading-snug">{o.label}</div>
+                  {o.sub && <div className="text-xs opacity-60 mt-1 font-bold">{o.sub}</div>}
+                </button>
+              )
+            })}
             {canNext && (
               <button
                 onClick={goNext}
-                className="col-span-2 md:col-span-1 w-full rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-4 tracking-widest transition-colors"
+                className="col-span-2 md:col-span-1 w-full bg-[#e60012] text-[#ffe800] border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#ffe800] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#ffe800] transition-all"
               >
                 下一条需求 →
               </button>
