@@ -286,7 +286,7 @@ export default function App() {
         <Marquee className="bottom-0" reverse />
         <div className="newugly-title select-none">再大一点</div>
         <div className="bg-[#1e50a2] text-[#ffe800] font-black text-sm md:text-base px-4 py-1 border-2 border-black shadow-[4px_4px_0_#e60012] rotate-[0.5deg]">
-          一个你永远无法满足甲方需求的荒诞选择游戏
+          在吗？Logo 再大一点。
         </div>
         <div className="text-zinc-500 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
         <button
