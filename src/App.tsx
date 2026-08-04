@@ -3,6 +3,7 @@ import {
   rounds,
   endings,
   nextRoundId,
+  deliveryFiles,
   resolveEnding,
   flagEpilogues,
   initialCanvas,
@@ -328,7 +329,10 @@ export default function App() {
 
   const goNext = () => {
     const next = nextRoundId(roundId, lastChosenRef.current)
-    if (next) startRound(next)
+    if (!next) return
+    // 剧情内动作：先把稿子发出去，新需求自己找上门
+    setBusy(true)
+    pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
   }
 
   const epilogues = flagEpilogues(flags)
@@ -453,9 +457,9 @@ export default function App() {
             {canNext && (
               <button
                 onClick={goNext}
-                className="col-span-2 md:col-span-1 w-full bg-[#e60012] text-[#ffe800] border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#000] transition-all"
+                className="col-span-2 md:col-span-1 w-full bg-lime-300 text-black border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#000] transition-all"
               >
-                下一条需求 →
+                📎 发送「{deliveryFiles[roundId] ?? '海报.psd'}」→
               </button>
             )}
             {!canNext && available.length === 0 && busy && (

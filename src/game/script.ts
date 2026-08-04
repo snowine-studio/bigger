@@ -275,6 +275,13 @@ export function nextRoundId(roundId: string, optionId: string): string | null {
   return null
 }
 
+// 每轮交付时发出去的文件名（文件名本身也是笑话）
+export const deliveryFiles: Record<string, string> = {
+  r1: '海报_v2.psd',
+  r2A: '海报_v2_最终版.psd',
+  r2C: '海报_专业版_最终版.psd',
+}
+
 export interface Ending {
   title: string
   lines: ChatMsg[]
