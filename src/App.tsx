@@ -342,7 +342,7 @@ export default function App() {
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
-  const [showPortfolio, setShowPortfolio] = useState(false) // offer 附件预览
+  const [attachment, setAttachment] = useState<'offer' | 'resume' | 'portfolio' | null>(null) // 邮件附件预览
   const [alarmSet, setAlarmSet] = useState(false) // 闹钟是否改到 7:00
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
@@ -436,7 +436,7 @@ export default function App() {
     setTakeover(false)
     setZipFx(false)
     lastChosenRef.current = ''
-    setShowPortfolio(false)
+    setAttachment(null)
     setPhase('playing')
     startRound('r1')
   }
@@ -557,100 +557,274 @@ export default function App() {
     )
   }
 
-  // ─────────────── 前情 1/3：那封 offer 邮件 ───────────────
+  // ─────────────── 前情 1/3：那封 offer 邮件（Q邮邮箱） ───────────────
   if (phase === 'offer') {
+    const sideItem = 'cursor-pointer rounded px-2.5 py-1.5 text-zinc-600 hover:bg-blue-100'
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-5 p-4">
-        <div className="max-w-lg w-full bg-white text-black rounded-xl border-[3px] border-black shadow-[8px_8px_0_#1e50a2] overflow-hidden animate-[fadeIn_.5s_ease]">
-          {/* 邮件头部 */}
-          <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 text-xs text-zinc-500 flex justify-between">
-            <span>📧 收件箱（1）</span>
-            <span>昨天 18:42</span>
-          </div>
-          <div className="px-5 py-3 border-b border-zinc-200 text-xs space-y-1">
-            <div><span className="text-zinc-400">发件人：</span>宏图伟业广告 · 人事部 &lt;hr@htwy-ad.cn&gt;</div>
-            <div><span className="text-zinc-400">主题：</span><span className="font-black">【Offer】设计师（试用期）｜欢迎加入</span></div>
-          </div>
-          {/* 正文 */}
-          <div className="px-5 py-4 text-sm space-y-3 leading-relaxed">
-            <p>同学，你好：</p>
-            <p>你的作品我们都看了。<strong>就是看重你的潜力。</strong></p>
-            <p>现正式向你发出 offer：<strong>设计师（试用期）</strong>，明天入职。</p>
-            <p className="text-zinc-500 text-xs">薪资：试用期 4500 元/月，转正后另行面议。</p>
-            {/* 附件：作品集 */}
-            <button
-              onClick={() => {
-                sfx.click()
-                setShowPortfolio(true)
-              }}
-              className="w-full text-left bg-zinc-100 hover:bg-[#ffe800] border-2 border-black px-3 py-2 text-xs font-mono transition-colors"
-            >
-              📎 我的作品集_最终_真的最终.zip（45.2 MB）
-              <span className="float-right text-zinc-400">点击预览</span>
-            </button>
-          </div>
+      <div className="min-h-screen bg-[#e8eef5] text-zinc-900 flex flex-col animate-[fadeIn_.5s_ease]">
+        {/* 邮箱顶栏 */}
+        <div className="flex items-center gap-3 bg-[#1d6fd1] px-4 py-2.5 text-white">
+          <span className="text-lg font-black tracking-wide">Q邮邮箱</span>
+          <span className="hidden text-xs text-blue-200 sm:inline">你毕业前注册的那个邮箱</span>
+          <span className="ml-auto text-xs text-blue-200">设置 | 退出</span>
         </div>
-        <button
-          onClick={() => {
-            sfx.click()
-            setPhase('moments')
-          }}
-          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1e50a2] transition-all"
-        >
-          接受 offer →
-        </button>
 
-        {/* 作品集附件预览 */}
-        {showPortfolio && (
-          <div
-            onClick={() => setShowPortfolio(false)}
-            className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-3 p-6 cursor-pointer"
-          >
-            <div className="text-zinc-400 text-xs font-mono">我的作品集_最终_真的最终.zip · 预览（5 个文件）</div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-2xl">
-              {/* 课堂作业 ×3 */}
-              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
-                <div className="aspect-square bg-zinc-200 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute w-1/2 h-1 bg-black rotate-12" />
-                  <div className="absolute w-2 h-2 bg-black rounded-full left-3 top-3" />
-                  <div className="absolute w-2 h-2 bg-black rounded-full right-4 bottom-5" />
+        <div className="flex flex-1">
+          {/* 左侧栏（手机端收起） */}
+          <aside className="hidden w-44 shrink-0 flex-col gap-0.5 border-r border-[#d3dde8] bg-[#f3f7fb] px-2 py-3 text-[13px] md:flex">
+            <div className="mb-2 flex flex-col gap-1.5 px-1">
+              <span className="rounded bg-[#1d6fd1] py-2 text-center text-sm font-bold text-white">✉️ 写信</span>
+              <span className="rounded border border-[#c7d7e8] bg-white py-2 text-center text-sm text-[#1d6fd1]">收信</span>
+            </div>
+            <p className={`${sideItem} font-bold text-[#1d6fd1]`}>📥 收件箱 <span className="font-black">(32)</span></p>
+            <p className={sideItem}>⭐ 星标邮件</p>
+            <p className={sideItem}>👥 群邮件 <span className="text-zinc-400">(4)</span></p>
+            <p className={sideItem}>📝 草稿箱 <span className="text-zinc-400">(1)</span></p>
+            <p className={sideItem}>📤 已发送</p>
+            <p className={sideItem}>🗑️ 已删除</p>
+            <p className={sideItem}>🚮 垃圾箱 <span className="text-zinc-400">(87)</span></p>
+            <p className="mt-2 border-t border-[#dde6ee] pt-2 text-xs text-zinc-400">我的文件夹</p>
+            <p className={sideItem}>📁 求职投递(46)</p>
+            <p className={sideItem}>📁 毕业论文(别问)</p>
+            <p className="mt-2 border-t border-[#dde6ee] pt-2 text-xs text-zinc-400">其他功能</p>
+            <p className={sideItem}>📅 日历 | 🗒️ 记事本</p>
+            <p className={`${sideItem} flex items-center gap-1`}>
+              📄 简历
+              <span className="rounded bg-orange-500 px-1 text-[10px] font-bold text-white">NEW</span>
+            </p>
+          </aside>
+
+          {/* 主区域 */}
+          <main className="min-w-0 flex-1 px-3 py-3 sm:px-5">
+            {/* 工具栏（纯装饰） */}
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-[#d3dde8] bg-white px-3 py-2 text-xs text-zinc-500">
+              <span className="cursor-pointer hover:text-[#1d6fd1]">◀ 返回</span>
+              <span className="cursor-pointer hover:text-[#1d6fd1]">删除</span>
+              <span className="cursor-pointer hover:text-[#1d6fd1]">转发</span>
+              <span className="cursor-pointer hover:text-[#1d6fd1]">举报</span>
+              <span className="cursor-pointer hover:text-[#1d6fd1]">标记为 ▾</span>
+              <span className="ml-auto hidden sm:inline">第 1 / 32 封</span>
+            </div>
+
+            {/* 邮件本体 */}
+            <div className="rounded border border-[#d3dde8] bg-white">
+              {/* 邮件头 */}
+              <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
+                <p className="text-base font-black sm:text-lg">【录用通知】同学，你被选中了！</p>
+                <div className="mt-3 flex items-center gap-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-black text-white">宏</span>
+                  <div className="text-xs leading-relaxed text-zinc-500">
+                    <p><span className="font-bold text-zinc-700">宏图伟业广告 · 人事部</span> &lt;hr@htwy-ad.cn&gt;</p>
+                    <p>时间：昨天 18:52 &nbsp;·&nbsp; 收件人：未来的大设计师（也就是你）</p>
+                  </div>
                 </div>
-                <div className="text-[10px] font-mono p-1">点线面构成练习.ai</div>
               </div>
-              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
-                <div className="aspect-square grid grid-cols-3">
-                  {['#e60012', '#ffe800', '#1e50a2', '#ff2e88', '#0d9488', '#000', '#ffe800', '#1e50a2', '#e60012'].map((c, i) => (
-                    <div key={i} style={{ background: c }} />
-                  ))}
+
+              {/* 正文 */}
+              <div className="px-4 py-5 text-sm leading-[1.9] sm:px-6">
+                <p>同学你好：</p>
+                <p className="mt-2">你的作品集我们<b>全部看完了</b>（一共 5 个文件，看了 3 个）。</p>
+                <p className="mt-2">
+                  经我司高层（李总本人）连夜研究决定：<b className="text-[#1d6fd1]">你非常适合我们公司。</b>
+                </p>
+                <p className="mt-2">随信附上：</p>
+                <p className="mt-1 pl-4">① 正式 offer —— 请打印签字，明天带过来；</p>
+                <p className="pl-4">② 你的简历和作品集 —— 存档用。简历里「精通 Photoshop」的「精通」，我们会按「了解」理解。</p>
+                <p className="mt-2">明天见。</p>
+                <p className="mt-5 text-zinc-500">宏图伟业广告有限公司 人事部</p>
+                <p className="text-xs text-zinc-400">（公司在阳光家园小区 3 栋 2 单元 501，电梯坏了，请走楼梯。）</p>
+
+                {/* 附件区：三个附件 */}
+                <div className="mt-5 rounded-lg border border-[#d3dde8] bg-[#f7fafc] p-3">
+                  <p className="mb-2 text-xs text-zinc-500">附件 <span className="font-bold">(3)</span> 个 · 全部下载</p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <button
+                      onClick={() => { sfx.click(); setAttachment('offer') }}
+                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                    >
+                      <span className="text-xl">📄</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">录用通知书_Offer.pdf</span>
+                        <span className="block text-[10px] text-zinc-400">256KB · 点击预览</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => { sfx.click(); setAttachment('resume') }}
+                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                    >
+                      <span className="text-xl">📝</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">我的简历_最终版3.doc</span>
+                        <span className="block text-[10px] text-zinc-400">89KB · 点击预览</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => { sfx.click(); setAttachment('portfolio') }}
+                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                    >
+                      <span className="text-xl">🗜️</span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">我的作品集_最终_真的最终.zip</span>
+                        <span className="block text-[10px] text-zinc-400">45.2MB · 点击预览</span>
+                      </span>
+                    </button>
+                  </div>
                 </div>
-                <div className="text-[10px] font-mono p-1">色彩构成作业.ai</div>
-              </div>
-              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
-                <div className="aspect-square bg-white flex items-center justify-center">
-                  <span className="font-black text-black" style={{ fontSize: '3rem' }}>永</span>
-                </div>
-                <div className="text-[10px] font-mono p-1">字体练习_永字八法.ai</div>
-              </div>
-              {/* 表情包合集 */}
-              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
-                <div className="aspect-square grid grid-cols-3 place-items-center text-2xl bg-zinc-50">
-                  {['😂', '🔥', '👍', '😭', '🙏', '💪', '🐶', '💰', '✨'].map((e, i) => (
-                    <span key={i}>{e}</span>
-                  ))}
-                </div>
-                <div className="text-[10px] font-mono p-1">表情包合集（精品）.zip</div>
-              </div>
-              {/* 亲戚招牌 */}
-              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b] col-span-2">
-                <div className="aspect-[3/1] bg-[#e60012] flex items-center justify-center border-2 border-black" style={{ boxShadow: 'inset 0 0 0 2px #ffe800' }}>
-                  <span className="font-black text-[#ffe800] text-xl md:text-2xl tracking-widest" style={{ textShadow: '2px 2px 0 #000' }}>
-                    老王五金建材 · 电话 138XXXX8888
-                  </span>
-                </div>
-                <div className="text-[10px] font-mono p-1">给二舅店里做的招牌（实物已安装）.psd</div>
               </div>
             </div>
-            <div className="text-zinc-500 text-xs">点按任意处关闭</div>
+
+            {/* 接受 offer */}
+            <div className="mt-5 flex justify-center pb-8">
+              <button
+                onClick={() => {
+                  sfx.click()
+                  setPhase('moments')
+                }}
+                className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1d6fd1] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1d6fd1] transition-all"
+              >
+                接受 offer →
+              </button>
+            </div>
+          </main>
+        </div>
+
+        {/* ── 附件预览弹层 ── */}
+        {attachment && (
+          <div
+            onClick={() => setAttachment(null)}
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+          >
+            <div
+              className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-4 sm:p-6 shadow-2xl cursor-default"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 附件①：正式 offer 文件 */}
+              {attachment === 'offer' && (
+                <div className="border-4 border-double border-red-700 bg-[#fffdf5] p-5 sm:p-7 text-zinc-900">
+                  <p className="text-center text-xs tracking-[0.5em] text-red-700">宏图伟业广告有限公司</p>
+                  <p className="mt-1 text-center text-2xl font-black tracking-[0.3em] text-red-700">录用通知书</p>
+                  <div className="my-4 border-t-2 border-red-700" />
+                  <p className="text-sm leading-[2]">
+                    兹录用 <u>&nbsp;你&nbsp;</u> 同志为我司<b>设计师（试用期）</b>，
+                    试用期薪资 4500 元/月，转正后另行面议（注：已面议完毕，结果不可更改）。
+                  </p>
+                  <p className="mt-2 text-sm leading-[2]">
+                    请于<b>明日上午 9:00 前</b>携本通知书、身份证，以及饱满的热情，
+                    到阳光家园小区 3 栋 2 单元 501 报到。
+                  </p>
+                  <p className="mt-2 text-sm leading-[2] text-zinc-500">
+                    备注：岗位实行弹性工作制——上班很固定，下班很弹性。
+                  </p>
+                  <div className="mt-6 flex items-end justify-between">
+                    <p className="text-xs text-zinc-500">
+                      宏图伟业广告有限公司<br />人事部（兼行政、兼前台）
+                    </p>
+                    <span className="flex h-20 w-20 -rotate-12 items-center justify-center rounded-full border-4 border-red-600 text-center text-[10px] font-black leading-tight text-red-600">
+                      宏图伟业<br />广告有限<br />公司
+                    </span>
+                  </div>
+                  <p className="mt-4 text-center text-[10px] text-zinc-400">（本通知书最终解释权归李总所有）</p>
+                </div>
+              )}
+
+              {/* 附件②：你的简历 */}
+              {attachment === 'resume' && (
+                <div className="border border-zinc-200 bg-white p-5 sm:p-6 text-zinc-900">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xl font-black">个 人 简 历</p>
+                      <p className="mt-1 text-xs text-zinc-500">求职意向：平面设计师（能发工资就行）</p>
+                    </div>
+                    <span className="flex h-16 w-12 shrink-0 items-center justify-center border border-zinc-300 bg-zinc-100 text-center text-[10px] leading-tight text-zinc-400">
+                      一寸<br />免冠<br />照片<br />（忘贴）
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-3 text-xs leading-relaxed">
+                    <section>
+                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍专业技能</p>
+                      <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                        <li>精通 Photoshop（打开过）</li>
+                        <li>熟练使用 AI（知道是软件，不是人工智能）</li>
+                        <li>擅长 Word 艺术字排版（曾获全宿舍一致好评）</li>
+                        <li>精通核心快捷键：Ctrl+C、Ctrl+V、Ctrl+Z（按使用频率排序）</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍获奖经历</p>
+                      <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                        <li>二舅五金店「年度最佳设计奖」（唯一参评作品）</li>
+                        <li>军训先进个人（与设计无关，但能吃苦，真的）</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍项目经验</p>
+                      <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                        <li>独立运营个人表情包 IP（48 张，累计传播：自己换手机传了 2 次）</li>
+                        <li>主导二舅五金建材品牌升级项目（甲方是二舅，尾款是一顿饭）</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍自我评价</p>
+                      <p className="mt-1.5">吃苦耐劳，接受无偿加班，抗压能力强。（当时是真心的。）</p>
+                    </section>
+                  </div>
+                  <p className="mt-4 text-center text-[10px] text-zinc-400">文件名：我的简历_最终版3.doc（最终版、最终版2 已被覆盖）</p>
+                </div>
+              )}
+
+              {/* 附件③：作品集 */}
+              {attachment === 'portfolio' && (
+                <div>
+                  <p className="mb-3 text-sm font-bold text-zinc-800">📁 我的作品集_最终_真的最终.zip · 预览（5 个文件）</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {/* 课堂作业 ×3 */}
+                    <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                      <div className="aspect-square bg-zinc-200 flex items-center justify-center relative overflow-hidden">
+                        <div className="absolute w-1/2 h-1 bg-black rotate-12" />
+                        <div className="absolute w-2 h-2 bg-black rounded-full left-3 top-3" />
+                        <div className="absolute w-2 h-2 bg-black rounded-full right-4 bottom-5" />
+                      </div>
+                      <div className="text-[10px] font-mono p-1">点线面构成练习.ai</div>
+                    </div>
+                    <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                      <div className="aspect-square grid grid-cols-3">
+                        {['#e60012', '#ffe800', '#1e50a2', '#ff2e88', '#0d9488', '#000', '#ffe800', '#1e50a2', '#e60012'].map((c, i) => (
+                          <div key={i} style={{ background: c }} />
+                        ))}
+                      </div>
+                      <div className="text-[10px] font-mono p-1">色彩构成作业.ai</div>
+                    </div>
+                    <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                      <div className="aspect-square bg-white flex items-center justify-center">
+                        <span className="font-black text-black" style={{ fontSize: '3rem' }}>永</span>
+                      </div>
+                      <div className="text-[10px] font-mono p-1">字体练习_永字八法.ai</div>
+                    </div>
+                    {/* 表情包合集 */}
+                    <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                      <div className="aspect-square grid grid-cols-3 place-items-center text-2xl bg-zinc-50">
+                        {['😂', '🔥', '👍', '😭', '🙏', '💪', '🐶', '💰', '✨'].map((e, i) => (
+                          <span key={i}>{e}</span>
+                        ))}
+                      </div>
+                      <div className="text-[10px] font-mono p-1">表情包合集（精品）.zip</div>
+                    </div>
+                    {/* 亲戚招牌 */}
+                    <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b] col-span-2">
+                      <div className="aspect-[3/1] bg-[#e60012] flex items-center justify-center border-2 border-black" style={{ boxShadow: 'inset 0 0 0 2px #ffe800' }}>
+                        <span className="font-black text-[#ffe800] text-xl md:text-2xl tracking-widest" style={{ textShadow: '2px 2px 0 #000' }}>
+                          老王五金建材 · 电话 138XXXX8888
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-mono p-1">给二舅店里做的招牌（实物已安装）.psd</div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-center text-xs text-zinc-400">课堂作业 ×3 · 表情包合集 ×1 · 二舅家招牌 ×1</p>
+                </div>
+              )}
+
+              <p className="mt-4 text-center text-xs text-zinc-400">点击空白处关闭预览</p>
+            </div>
           </div>
         )}
         <MuteBtn />
