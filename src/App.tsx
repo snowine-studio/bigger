@@ -540,7 +540,7 @@ export default function App() {
         <div className="bg-[#1e50a2] text-[#ffe800] font-black text-sm md:text-base px-4 py-1 border-2 border-black shadow-[4px_4px_0_#e60012] rotate-[0.5deg]">
           在吗？Logo 再大一点。
         </div>
-        <div className="text-zinc-500 text-xs">DAY 1 · 三条需求 · 九个结局 · 大约 3 分钟</div>
+        <div className="text-zinc-500 text-xs">DAY 1 · 五个结局 · 五种死法 · 大约 3 分钟</div>
         <button
           onClick={() => {
             sfx.stopBgm()
@@ -550,7 +550,7 @@ export default function App() {
           }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
-          接单
+          开稿大吉
         </button>
         <MuteBtn />
       </div>
