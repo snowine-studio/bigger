@@ -563,7 +563,8 @@ export default function App() {
             <p>经评估，我司认为你的作品集<strong>极具潜力</strong>，决定录用你为设计师（试用期）。</p>
             <p className="text-zinc-500 text-xs">（你的作品集包含：课堂作业 ×3、表情包合集 ×1、给亲戚店里做的招牌 ×1）</p>
             <p className="text-zinc-500 text-xs">（但 HR 说：就是看重你的潜力）</p>
-            <p className="font-bold">你高兴了一整晚。</p>
+            <p className="font-bold">当晚，你把通知书截图发了朋友圈，配文「新的开始 💪」，设为分组可见。</p>
+            <p className="font-bold">闹钟从 9:00 调到了 7:00。</p>
           </div>
           <div className="mt-4 flex items-end justify-between">
             <div className="text-xs text-zinc-500">
