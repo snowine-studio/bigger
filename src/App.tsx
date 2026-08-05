@@ -129,7 +129,7 @@ function MuteBtn() {
   )
 }
 
-/** 简历里「括号内的字」：鼠标悬停 / 点按才显现 */
+/** 简历里「括号内的字」：默认是涂黑马赛克条，悬停 / 点按才揭开 */
 function Secret({ children }: { children: React.ReactNode }) {
   const [show, setShow] = useState(false)
   return (
@@ -140,7 +140,11 @@ function Secret({ children }: { children: React.ReactNode }) {
         e.stopPropagation()
         setShow((v) => !v)
       }}
-      className={`cursor-help transition-opacity duration-200 ${show ? 'opacity-100' : 'opacity-0'} text-zinc-400`}
+      className={`cursor-help rounded-sm px-0.5 transition-all duration-150 ${
+        show
+          ? 'bg-[#ffe800] text-black shadow-[1px_1px_0_#000]'
+          : 'bg-black text-transparent select-none hover:bg-zinc-800'
+      }`}
     >
       {children}
     </span>
@@ -924,7 +928,7 @@ export default function App() {
                       <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍专业技能</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
                         <li>精通 Photoshop<Secret>（打开过）</Secret></li>
-                        <li>熟练使用 AI<Secret>（知道是软件，不是人工智能）</Secret></li>
+                        <li>熟练使用 AI<Secret>（滚滚长江东逝水）</Secret></li>
                         <li>擅长 Word 艺术字排版<Secret>（曾获全宿舍一致好评）</Secret></li>
                         <li>精通核心快捷键：Ctrl+C、Ctrl+V、Ctrl+Z<Secret>（按使用频率排序）</Secret></li>
                       </ul>
@@ -949,7 +953,7 @@ export default function App() {
                     </section>
                   </div>
                   <p className="mt-4 text-center text-[10px] text-zinc-400">文件名：我的简历_最终版3.doc（最终版、最终版2 已被覆盖）</p>
-                  <p className="mt-1 text-center text-[10px] text-zinc-300">* 简历上有些地方，把鼠标放上去（或点一下）会有惊喜</p>
+                  <p className="mt-1 text-center text-[10px] text-zinc-300">* 简历上涂黑的地方，把鼠标放上去（或点一下）可以解密</p>
                 </div>
               )}
 
