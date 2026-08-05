@@ -559,60 +559,64 @@ export default function App() {
 
   // ─────────────── 前情 1/3：那封 offer 邮件（Q邮邮箱） ───────────────
   if (phase === 'offer') {
-    const sideItem = 'cursor-pointer rounded px-2.5 py-1.5 text-zinc-600 hover:bg-blue-100'
+    const sideItem = 'cursor-pointer px-2.5 py-1.5 text-zinc-600 hover:bg-[#ffe800] hover:text-black'
     return (
       <div className="min-h-screen bg-[#e8eef5] text-zinc-900 flex flex-col animate-[fadeIn_.5s_ease]">
         {/* 邮箱顶栏 */}
-        <div className="flex items-center gap-3 bg-[#1d6fd1] px-4 py-2.5 text-white">
-          <span className="text-lg font-black tracking-wide">Q邮邮箱</span>
-          <span className="hidden text-xs text-blue-200 sm:inline">你毕业前注册的那个邮箱</span>
-          <span className="ml-auto text-xs text-blue-200">设置 | 退出</span>
+        <div className="flex items-center gap-3 bg-[#1d6fd1] px-4 py-2.5 text-white border-b-[3px] border-black">
+          <span className="text-lg font-black tracking-wide" style={{ textShadow: '2px 2px 0 #000' }}>Q邮邮箱</span>
+          <span className="hidden text-xs bg-black px-1.5 py-0.5 font-mono sm:inline">你毕业前注册的那个邮箱</span>
+          <span className="ml-auto text-xs font-bold underline underline-offset-2">设置 | 退出</span>
         </div>
 
         <div className="flex flex-1">
           {/* 左侧栏（手机端收起） */}
-          <aside className="hidden w-44 shrink-0 flex-col gap-0.5 border-r border-[#d3dde8] bg-[#f3f7fb] px-2 py-3 text-[13px] md:flex">
-            <div className="mb-2 flex flex-col gap-1.5 px-1">
-              <span className="rounded bg-[#1d6fd1] py-2 text-center text-sm font-bold text-white">✉️ 写信</span>
-              <span className="rounded border border-[#c7d7e8] bg-white py-2 text-center text-sm text-[#1d6fd1]">收信</span>
+          <aside className="hidden w-44 shrink-0 flex-col gap-1 border-r-[3px] border-black bg-white px-2 py-3 text-[13px] font-mono md:flex">
+            <div className="mb-2 flex flex-col gap-2 px-1">
+              <span className="border-2 border-black bg-[#ff2e88] py-2 text-center text-sm font-black text-white shadow-[3px_3px_0_#000]">✉️ 写信</span>
+              <span className="border-2 border-black bg-white py-2 text-center text-sm font-bold shadow-[3px_3px_0_#000]">收信</span>
             </div>
-            <p className={`${sideItem} font-bold text-[#1d6fd1]`}>📥 收件箱 <span className="font-black">(32)</span></p>
+            <p className={`${sideItem} border-2 border-black bg-[#ffe800] font-black text-black`}>📥 收件箱 <span className="font-black">(32)</span></p>
             <p className={sideItem}>⭐ 星标邮件</p>
             <p className={sideItem}>👥 群邮件 <span className="text-zinc-400">(4)</span></p>
             <p className={sideItem}>📝 草稿箱 <span className="text-zinc-400">(1)</span></p>
             <p className={sideItem}>📤 已发送</p>
             <p className={sideItem}>🗑️ 已删除</p>
             <p className={sideItem}>🚮 垃圾箱 <span className="text-zinc-400">(87)</span></p>
-            <p className="mt-2 border-t border-[#dde6ee] pt-2 text-xs text-zinc-400">我的文件夹</p>
+            <p className="mt-2 border-t-2 border-black pt-2 text-xs text-zinc-400">我的文件夹</p>
             <p className={sideItem}>📁 求职投递(46)</p>
             <p className={sideItem}>📁 毕业论文(别问)</p>
-            <p className="mt-2 border-t border-[#dde6ee] pt-2 text-xs text-zinc-400">其他功能</p>
+            <p className="mt-2 border-t-2 border-black pt-2 text-xs text-zinc-400">其他功能</p>
             <p className={sideItem}>📅 日历 | 🗒️ 记事本</p>
             <p className={`${sideItem} flex items-center gap-1`}>
               📄 简历
-              <span className="rounded bg-orange-500 px-1 text-[10px] font-bold text-white">NEW</span>
+              <span className="border border-black bg-[#e60012] px-1 text-[10px] font-black text-white">NEW</span>
             </p>
           </aside>
 
           {/* 主区域 */}
           <main className="min-w-0 flex-1 px-3 py-3 sm:px-5">
             {/* 工具栏（纯装饰） */}
-            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-[#d3dde8] bg-white px-3 py-2 text-xs text-zinc-500">
-              <span className="cursor-pointer hover:text-[#1d6fd1]">◀ 返回</span>
-              <span className="cursor-pointer hover:text-[#1d6fd1]">删除</span>
-              <span className="cursor-pointer hover:text-[#1d6fd1]">转发</span>
-              <span className="cursor-pointer hover:text-[#1d6fd1]">举报</span>
-              <span className="cursor-pointer hover:text-[#1d6fd1]">标记为 ▾</span>
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-2 border-black bg-white px-3 py-2 text-xs font-mono text-zinc-600 shadow-[4px_4px_0_#000]">
+              <span className="cursor-pointer hover:bg-[#ffe800]">◀ 返回</span>
+              <span className="cursor-pointer hover:bg-[#ffe800]">删除</span>
+              <span className="cursor-pointer hover:bg-[#ffe800]">转发</span>
+              <span className="cursor-pointer hover:bg-[#ffe800]">举报</span>
+              <span className="cursor-pointer hover:bg-[#ffe800]">标记为 ▾</span>
               <span className="ml-auto hidden sm:inline">第 1 / 32 封</span>
             </div>
 
             {/* 邮件本体 */}
-            <div className="rounded border border-[#d3dde8] bg-white">
+            <div className="relative border-[3px] border-black bg-white shadow-[8px_8px_0_#1d6fd1]">
+              {/* 贴纸 */}
+              <span className="absolute -right-2 -top-3 z-10 rotate-6 border-2 border-black bg-[#e60012] px-2 py-0.5 text-xs font-black text-white shadow-[3px_3px_0_#000]">
+                内含 offer !!
+              </span>
               {/* 邮件头 */}
-              <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
+              <div className="border-b-[3px] border-black px-4 py-4 sm:px-6">
                 <p className="text-base font-black sm:text-lg">【录用通知】同学，你被选中了！</p>
                 <div className="mt-3 flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-black text-white">宏</span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-black bg-[#ff2e88] text-sm font-black text-white">宏</span>
                   <div className="text-xs leading-relaxed text-zinc-500">
                     <p><span className="font-bold text-zinc-700">宏图伟业广告 · 人事部</span> &lt;hr@htwy-ad.cn&gt;</p>
                     <p>时间：昨天 18:52 &nbsp;·&nbsp; 收件人：未来的大设计师（也就是你）</p>
@@ -625,7 +629,8 @@ export default function App() {
                 <p>同学你好：</p>
                 <p className="mt-2">你的作品集我们<b>全部看完了</b>（一共 5 个文件，看了 3 个）。</p>
                 <p className="mt-2">
-                  经我司高层（李总本人）连夜研究决定：<b className="text-[#1d6fd1]">你非常适合我们公司。</b>
+                  经我司高层（李总本人）连夜研究决定：
+                  <b className="border-2 border-black bg-[#ffe800] px-1">你非常适合我们公司。</b>
                 </p>
                 <p className="mt-2">随信附上：</p>
                 <p className="mt-1 pl-4">① 正式 offer —— 请打印签字，明天带过来；</p>
@@ -635,36 +640,36 @@ export default function App() {
                 <p className="text-xs text-zinc-400">（公司在阳光家园小区 3 栋 2 单元 501，电梯坏了，请走楼梯。）</p>
 
                 {/* 附件区：三个附件 */}
-                <div className="mt-5 rounded-lg border border-[#d3dde8] bg-[#f7fafc] p-3">
-                  <p className="mb-2 text-xs text-zinc-500">附件 <span className="font-bold">(3)</span> 个 · 全部下载</p>
-                  <div className="grid gap-2 sm:grid-cols-3">
+                <div className="mt-5 border-2 border-dashed border-black bg-zinc-100 p-3">
+                  <p className="mb-2 text-xs font-mono text-zinc-500">附件 <span className="font-black text-black">(3)</span> 个 · 全部下载</p>
+                  <div className="grid gap-2.5 sm:grid-cols-3">
                     <button
                       onClick={() => { sfx.click(); setAttachment('offer') }}
-                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                      className="flex items-center gap-2 border-2 border-black bg-white px-3 py-2.5 text-left shadow-[3px_3px_0_#e60012] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#e60012]"
                     >
                       <span className="text-xl">📄</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">录用通知书_Offer.pdf</span>
+                        <span className="block truncate text-xs font-black font-mono">录用通知书_Offer.pdf</span>
                         <span className="block text-[10px] text-zinc-400">256KB · 点击预览</span>
                       </span>
                     </button>
                     <button
                       onClick={() => { sfx.click(); setAttachment('resume') }}
-                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                      className="flex items-center gap-2 border-2 border-black bg-white px-3 py-2.5 text-left shadow-[3px_3px_0_#1d6fd1] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#1d6fd1]"
                     >
                       <span className="text-xl">📝</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">我的简历_最终版3.doc</span>
+                        <span className="block truncate text-xs font-black font-mono">我的简历_最终版3.doc</span>
                         <span className="block text-[10px] text-zinc-400">89KB · 点击预览</span>
                       </span>
                     </button>
                     <button
                       onClick={() => { sfx.click(); setAttachment('portfolio') }}
-                      className="flex items-center gap-2 rounded border border-[#dbe3ec] bg-white px-3 py-2.5 text-left transition-colors hover:border-[#1d6fd1] hover:bg-blue-50"
+                      className="flex items-center gap-2 border-2 border-black bg-white px-3 py-2.5 text-left shadow-[3px_3px_0_#0d9488] transition-all hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#0d9488]"
                     >
                       <span className="text-xl">🗜️</span>
                       <span className="min-w-0">
-                        <span className="block truncate text-xs font-bold text-[#1d6fd1]">我的作品集_最终_真的最终.zip</span>
+                        <span className="block truncate text-xs font-black font-mono">我的作品集_最终_真的最终.zip</span>
                         <span className="block text-[10px] text-zinc-400">45.2MB · 点击预览</span>
                       </span>
                     </button>
@@ -695,7 +700,7 @@ export default function App() {
             className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
           >
             <div
-              className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-4 sm:p-6 shadow-2xl cursor-default"
+              className="max-h-[85vh] w-full max-w-2xl overflow-y-auto border-[3px] border-black bg-white p-4 sm:p-6 shadow-[10px_10px_0_#000] cursor-default"
               onClick={(e) => e.stopPropagation()}
             >
               {/* 附件①：正式 offer 文件 */}
@@ -729,19 +734,19 @@ export default function App() {
 
               {/* 附件②：你的简历 */}
               {attachment === 'resume' && (
-                <div className="border border-zinc-200 bg-white p-5 sm:p-6 text-zinc-900">
+                <div className="border-2 border-black bg-white p-5 sm:p-6 text-zinc-900">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xl font-black">个 人 简 历</p>
                       <p className="mt-1 text-xs text-zinc-500">求职意向：平面设计师（能发工资就行）</p>
                     </div>
-                    <span className="flex h-16 w-12 shrink-0 items-center justify-center border border-zinc-300 bg-zinc-100 text-center text-[10px] leading-tight text-zinc-400">
+                    <span className="flex h-16 w-12 shrink-0 items-center justify-center border-2 border-black bg-zinc-100 text-center text-[10px] leading-tight text-zinc-400">
                       一寸<br />免冠<br />照片<br />（忘贴）
                     </span>
                   </div>
                   <div className="mt-4 space-y-3 text-xs leading-relaxed">
                     <section>
-                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍专业技能</p>
+                      <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍专业技能</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
                         <li>精通 Photoshop（打开过）</li>
                         <li>熟练使用 AI（知道是软件，不是人工智能）</li>
@@ -750,21 +755,21 @@ export default function App() {
                       </ul>
                     </section>
                     <section>
-                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍获奖经历</p>
+                      <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍获奖经历</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
                         <li>二舅五金店「年度最佳设计奖」（唯一参评作品）</li>
                         <li>军训先进个人（与设计无关，但能吃苦，真的）</li>
                       </ul>
                     </section>
                     <section>
-                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍项目经验</p>
+                      <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍项目经验</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
                         <li>独立运营个人表情包 IP（48 张，累计传播：自己换手机传了 2 次）</li>
                         <li>主导二舅五金建材品牌升级项目（甲方是二舅，尾款是一顿饭）</li>
                       </ul>
                     </section>
                     <section>
-                      <p className="border-b-2 border-[#1d6fd1] pb-1 font-black text-[#1d6fd1]">▍自我评价</p>
+                      <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍自我评价</p>
                       <p className="mt-1.5">吃苦耐劳，接受无偿加班，抗压能力强。（当时是真心的。）</p>
                     </section>
                   </div>
