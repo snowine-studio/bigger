@@ -414,6 +414,11 @@ export interface Death {
 }
 
 export const deaths: Record<string, Death> = {
+  virus: {
+    no: 'No.000',
+    title: '手贱死',
+    reason: '你点开了垃圾箱里的「offer补充条款_务必查收.exe」。offer 被当场粉碎。职业生涯结束于开始之前。',
+  },
   reason: {
     no: 'No.001',
     title: '讲道理死',

@@ -129,6 +129,24 @@ function MuteBtn() {
   )
 }
 
+/** 简历里「括号内的字」：鼠标悬停 / 点按才显现 */
+function Secret({ children }: { children: React.ReactNode }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onClick={(e) => {
+        e.stopPropagation()
+        setShow((v) => !v)
+      }}
+      className={`cursor-help transition-opacity duration-200 ${show ? 'opacity-100' : 'opacity-0'} text-zinc-400`}
+    >
+      {children}
+    </span>
+  )
+}
+
 type Phase = 'intro' | 'offer' | 'moments' | 'alarm' | 'playing' | 'interlude' | 'ending' | 'death'
 
 // 死法图鉴（localStorage）
@@ -343,6 +361,9 @@ export default function App() {
   const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
   const [attachment, setAttachment] = useState<'offer' | 'resume' | 'portfolio' | null>(null) // 邮件附件预览
+  const [mailView, setMailView] = useState<'offer' | 'trash' | 'rejections'>('offer') // 邮箱里正在看的文件夹
+  const [virus, setVirus] = useState(0) // 病毒阶段：0 无 / 1 运行中 / 2 offer 已销毁
+  const [spamNote, setSpamNote] = useState<string | null>(null) // 点了垃圾邮件后的吐槽
   const [alarmSet, setAlarmSet] = useState(false) // 闹钟是否改到 7:00
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
@@ -376,6 +397,16 @@ export default function App() {
   }, [available.length, canNext, busy])
 
   useEffect(() => clearTimers, [])
+
+  // 病毒邮件：运行 2.4 秒后，offer 被销毁（计入死法图鉴：手贱死）
+  useEffect(() => {
+    if (virus !== 1) return
+    const t = setTimeout(() => {
+      setVirus(2)
+      unlockDeath('virus')
+    }, 2400)
+    return () => clearTimeout(t)
+  }, [virus])
 
   /** 逐条把消息推进聊天框；点聊天区可快进 */
   const pushMessages = useCallback((msgs: ChatMsg[], done: () => void) => {
@@ -540,12 +571,14 @@ export default function App() {
         <div className="bg-[#1e50a2] text-[#ffe800] font-black text-sm md:text-base px-4 py-1 border-2 border-black shadow-[4px_4px_0_#e60012] rotate-[0.5deg]">
           在吗？Logo 再大一点。
         </div>
-        <div className="text-zinc-500 text-xs">DAY 1 · 五个结局 · 五种死法 · 大约 3 分钟</div>
+        <div className="text-zinc-500 text-xs">DAY 1 · 五个结局 · 六种死法 · 大约 3 分钟</div>
         <button
           onClick={() => {
             sfx.stopBgm()
             sfx.click()
             setAlarmSet(false)
+            setMailView('offer')
+            setSpamNote(null)
             setPhase('offer')
           }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
@@ -576,15 +609,15 @@ export default function App() {
               <span className="border-2 border-black bg-[#ff2e88] py-2 text-center text-sm font-black text-white shadow-[3px_3px_0_#000]">✉️ 写信</span>
               <span className="border-2 border-black bg-white py-2 text-center text-sm font-bold shadow-[3px_3px_0_#000]">收信</span>
             </div>
-            <p className={`${sideItem} border-2 border-black bg-[#ffe800] font-black text-black`}>📥 收件箱 <span className="font-black">(32)</span></p>
+            <button onClick={() => setMailView('offer')} className={`${sideItem} text-left ${mailView === 'offer' ? 'border-2 border-black bg-[#ffe800] font-black text-black' : ''}`}>📥 收件箱 <span className="font-black">(32)</span></button>
             <p className={sideItem}>⭐ 星标邮件</p>
             <p className={sideItem}>👥 群邮件 <span className="text-zinc-400">(4)</span></p>
             <p className={sideItem}>📝 草稿箱 <span className="text-zinc-400">(1)</span></p>
             <p className={sideItem}>📤 已发送</p>
             <p className={sideItem}>🗑️ 已删除</p>
-            <p className={sideItem}>🚮 垃圾箱 <span className="text-zinc-400">(87)</span></p>
+            <button onClick={() => setMailView('trash')} className={`${sideItem} text-left ${mailView === 'trash' ? 'border-2 border-black bg-[#ffe800] font-black text-black' : ''}`}>🚮 垃圾箱 <span className="text-zinc-400">(87)</span></button>
             <p className="mt-2 border-t-2 border-black pt-2 text-xs text-zinc-400">我的文件夹</p>
-            <p className={sideItem}>📁 求职投递(46)</p>
+            <button onClick={() => setMailView('rejections')} className={`${sideItem} text-left ${mailView === 'rejections' ? 'border-2 border-black bg-[#ffe800] font-black text-black' : ''}`}>📁 求职投递(46)</button>
             <p className={sideItem}>📁 毕业论文(别问)</p>
             <p className="mt-2 border-t-2 border-black pt-2 text-xs text-zinc-400">其他功能</p>
             <p className={sideItem}>📅 日历 | 🗒️ 记事本</p>
@@ -606,6 +639,106 @@ export default function App() {
               <span className="ml-auto hidden sm:inline">第 1 / 32 封</span>
             </div>
 
+            {/* 手机端文件夹快捷入口 */}
+            <div className="mb-3 flex gap-2 md:hidden">
+              <button
+                onClick={() => setMailView('offer')}
+                className={`flex-1 border-2 border-black px-2 py-1.5 text-xs font-bold shadow-[3px_3px_0_#000] ${mailView === 'offer' ? 'bg-[#ffe800]' : 'bg-white'}`}
+              >
+                📥 收件箱(32)
+              </button>
+              <button
+                onClick={() => setMailView('rejections')}
+                className={`flex-1 border-2 border-black px-2 py-1.5 text-xs font-bold shadow-[3px_3px_0_#000] ${mailView === 'rejections' ? 'bg-[#ffe800]' : 'bg-white'}`}
+              >
+                📁 求职投递(46)
+              </button>
+              <button
+                onClick={() => setMailView('trash')}
+                className={`flex-1 border-2 border-black px-2 py-1.5 text-xs font-bold shadow-[3px_3px_0_#000] ${mailView === 'trash' ? 'bg-[#ffe800]' : 'bg-white'}`}
+              >
+                🚮 垃圾箱(87)
+              </button>
+            </div>
+
+            {/* ── 垃圾箱：87 个发财机会 ── */}
+            {mailView === 'trash' && (
+              <div className="relative border-[3px] border-black bg-white shadow-[8px_8px_0_#e60012]">
+                <div className="border-b-[3px] border-black px-4 py-3 sm:px-6">
+                  <p className="text-base font-black">🚮 垃圾箱 <span className="text-zinc-400">(87)</span></p>
+                  <p className="mt-0.5 text-xs text-zinc-400">87 个发财机会，和一个别的什么。</p>
+                </div>
+                {spamNote && (
+                  <p className="border-b-2 border-dashed border-black bg-[#ffe800] px-4 py-1.5 text-xs font-bold sm:px-6 animate-[fadeIn_.3s_ease]">💬 {spamNote}</p>
+                )}
+                <ul className="text-sm">
+                  {[
+                    { from: '幸运抽奖中心', sub: '【中奖了】iPhone 17 Pro Max 免费领取', note: '你居然点开了。还好只是广告。' },
+                    { from: '澳门线上娱乐', sub: '澳门首家线上堵场上线啦！', note: '别点这个，真的。' },
+                    { from: '国际快递客服', sub: '您的包裹在海关被扣，点击补缴关税 ¥98', note: '你没有包裹。你连买的东西都没有。' },
+                    { from: '职称论文代办', sub: '核心期刊代发，一周见刊', note: '你是设计师，你评什么职称。' },
+                    { from: 'Adobe 官方旗舰店（假）', sub: '全套正版 ¥9.9，懂的都懂', note: '你电脑里那个 ¥9.9 的就是这么来的。' },
+                    { from: '兼职联盟', sub: '打字员日结 800，宝妈学生均可', note: '你室友信了这个，现在在卖茶叶。' },
+                  ].map((m) => (
+                    <li key={m.sub}>
+                      <button
+                        onClick={() => { sfx.click(); setSpamNote(m.note) }}
+                        className="flex w-full items-baseline gap-2 border-b border-zinc-200 px-4 py-2.5 text-left hover:bg-[#ffe800] sm:px-6"
+                      >
+                        <span className="shrink-0 text-xs font-bold text-zinc-500 w-28 truncate">{m.from}</span>
+                        <span className="min-w-0 flex-1 truncate">{m.sub}</span>
+                      </button>
+                    </li>
+                  ))}
+                  {/* 病毒邮件：发件人冒充公司人事部 */}
+                  <li>
+                    <button
+                      onClick={() => { sfx.drop(); setSpamNote(null); setVirus(1) }}
+                      className="flex w-full items-baseline gap-2 border-b border-zinc-200 bg-red-50 px-4 py-2.5 text-left hover:bg-red-100 sm:px-6"
+                    >
+                      <span className="shrink-0 text-xs font-bold text-zinc-500 w-28 truncate">宏图伟业·人事部</span>
+                      <span className="min-w-0 flex-1 truncate font-bold text-red-700">【重要】offer补充条款_务必查收.pdf.exe</span>
+                      <span className="shrink-0 text-[10px] text-red-400">⚠️ 未读</span>
+                    </button>
+                  </li>
+                </ul>
+                <p className="px-4 py-3 text-center text-[10px] text-zinc-400 sm:px-6">系统提示：垃圾箱邮件将于 30 天后自动删除（那封 .exe 除外，它等的就是你）</p>
+              </div>
+            )}
+
+            {/* ── 求职投递：46 次主动出击 ── */}
+            {mailView === 'rejections' && (
+              <div className="relative border-[3px] border-black bg-white shadow-[8px_8px_0_#0d9488]">
+                <div className="border-b-[3px] border-black px-4 py-3 sm:px-6">
+                  <p className="text-base font-black">📁 求职投递 <span className="text-zinc-400">(46)</span></p>
+                  <p className="mt-0.5 text-xs text-zinc-400">你主动投出的 46 份简历，和它们的下场。</p>
+                </div>
+                <ul className="text-sm">
+                  {[
+                    { from: '星辰设计工作室', sub: '很遗憾，您的简历未通过初筛', detail: '系统记录：你的作品集一共被打开 12 秒。' },
+                    { from: '奥美森国际（4A）', sub: '感谢投递，简历已进入人才库', detail: '人才库，深度冷冻的那种。' },
+                    { from: '某大厂设计部', sub: '本岗位要求：应届生，5 年以上经验', detail: '你到现在也没想明白这五年从哪来。' },
+                    { from: '大象互动', sub: '您的作品风格与本司不符', detail: '他们实际需要一个会做 PPT 的。' },
+                    { from: '不知名公司 HR', sub: '面试邀请（发错了，请忽略）', detail: '你激动了四十分钟。' },
+                    { from: '自动回复', sub: '恭喜！您已进入终面！', detail: '发送于三个月前。你当时在军训，没看到。' },
+                    { from: '已读不回科技有限公司', sub: '已读。', detail: '就这两个字。' },
+                  ].map((m) => (
+                    <li key={m.sub} className="border-b border-zinc-200 px-4 py-2.5 sm:px-6">
+                      <p className="flex items-baseline gap-2">
+                        <span className="shrink-0 text-xs font-bold text-zinc-500 w-28 truncate">{m.from}</span>
+                        <span className="min-w-0 flex-1">{m.sub}</span>
+                      </p>
+                      <p className="mt-0.5 pl-0 text-[11px] text-zinc-400 sm:pl-[7.5rem]">{m.detail}</p>
+                    </li>
+                  ))}
+                </ul>
+                <p className="px-4 py-3 text-center text-[10px] text-zinc-400 sm:px-6">第 46 份投给了宏图伟业。然后你就收到了这封 offer。所以，知足吧。</p>
+              </div>
+            )}
+
+            {/* ── 收件箱：那封 offer ── */}
+            {mailView === 'offer' && (
+            <>
             {/* 邮件本体 */}
             <div className="relative border-[3px] border-black bg-white shadow-[8px_8px_0_#1d6fd1]">
               {/* 贴纸 */}
@@ -690,8 +823,50 @@ export default function App() {
                 接受 offer →
               </button>
             </div>
+            </>
+            )}
           </main>
         </div>
+
+        {/* ── 病毒接管：offer 粉碎机 ── */}
+        {virus > 0 && (
+          <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${virus === 1 ? 'animate-[alarmFlash_.5s_linear_infinite]' : 'bg-[#e60012]'}`}>
+            {virus === 1 && (
+              <div className="w-full max-w-md font-mono text-red-500">
+                <p className="text-lg font-black animate-pulse">⚠️ 未知程序运行中</p>
+                <p className="mt-2 text-xs">offer补充条款_务必查收.pdf.exe</p>
+                <div className="mt-4 h-4 w-full overflow-hidden border-2 border-red-500">
+                  <div className="h-full w-1/4 bg-red-500 animate-[loadingbar_.8s_linear_infinite_alternate]" />
+                </div>
+                <p className="mt-3 text-xs animate-pulse">正在定位：录用通知书_Offer.pdf …</p>
+                <p className="mt-1 text-[10px] text-red-800">此刻后悔已经来不及了</p>
+              </div>
+            )}
+            {virus === 2 && (
+              <div className="w-full max-w-lg border-4 border-black bg-black p-6 text-center shadow-[12px_12px_0_#ffe800] animate-[fadeIn_.4s_ease]">
+                <p className="font-mono text-xs text-red-500">offer粉碎机.exe · 运行完毕</p>
+                <p className="mt-4 text-3xl font-black text-[#ffe800]" style={{ textShadow: '3px 3px 0 #e60012' }}>你的 offer 已被永久删除</p>
+                <p className="mt-4 text-sm text-zinc-400 leading-relaxed">
+                  宏图伟业人事部表示：我们没发过这封邮件。<br />
+                  那 46 次求职投递，你可以再来一遍了。
+                </p>
+                <p className="mt-5 font-mono text-xs text-zinc-500">菜鸟设计师的一万种死法 · No.000 手贱死</p>
+                <button
+                  onClick={() => {
+                    sfx.click()
+                    setVirus(0)
+                    setMailView('offer')
+                    setAttachment(null)
+                    setPhase('intro')
+                  }}
+                  className="mt-6 border-[3px] border-black bg-[#ffe800] px-8 py-3 font-black text-black shadow-[6px_6px_0_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#fff] transition-all"
+                >
+                  重开人生 →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── 附件预览弹层 ── */}
         {attachment && (
@@ -748,32 +923,33 @@ export default function App() {
                     <section>
                       <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍专业技能</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
-                        <li>精通 Photoshop（打开过）</li>
-                        <li>熟练使用 AI（知道是软件，不是人工智能）</li>
-                        <li>擅长 Word 艺术字排版（曾获全宿舍一致好评）</li>
-                        <li>精通核心快捷键：Ctrl+C、Ctrl+V、Ctrl+Z（按使用频率排序）</li>
+                        <li>精通 Photoshop<Secret>（打开过）</Secret></li>
+                        <li>熟练使用 AI<Secret>（知道是软件，不是人工智能）</Secret></li>
+                        <li>擅长 Word 艺术字排版<Secret>（曾获全宿舍一致好评）</Secret></li>
+                        <li>精通核心快捷键：Ctrl+C、Ctrl+V、Ctrl+Z<Secret>（按使用频率排序）</Secret></li>
                       </ul>
                     </section>
                     <section>
                       <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍获奖经历</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
-                        <li>二舅五金店「年度最佳设计奖」（唯一参评作品）</li>
-                        <li>军训先进个人（与设计无关，但能吃苦，真的）</li>
+                        <li>二舅五金店「年度最佳设计奖」<Secret>（唯一参评作品）</Secret></li>
+                        <li>军训先进个人<Secret>（与设计无关，但能吃苦，真的）</Secret></li>
                       </ul>
                     </section>
                     <section>
                       <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍项目经验</p>
                       <ul className="mt-1.5 list-disc space-y-1 pl-5">
-                        <li>独立运营个人表情包 IP（48 张，累计传播：自己换手机传了 2 次）</li>
-                        <li>主导二舅五金建材品牌升级项目（甲方是二舅，尾款是一顿饭）</li>
+                        <li>独立运营个人表情包 IP<Secret>（48 张，累计传播：自己换手机传了 2 次）</Secret></li>
+                        <li>主导二舅五金建材品牌升级项目<Secret>（甲方是二舅，尾款是一顿饭）</Secret></li>
                       </ul>
                     </section>
                     <section>
                       <p className="inline-block border-2 border-black bg-black px-2 py-0.5 font-black text-white">▍自我评价</p>
-                      <p className="mt-1.5">吃苦耐劳，接受无偿加班，抗压能力强。（当时是真心的。）</p>
+                      <p className="mt-1.5">吃苦耐劳，接受无偿加班，抗压能力强。<Secret>（当时是真心的。）</Secret></p>
                     </section>
                   </div>
                   <p className="mt-4 text-center text-[10px] text-zinc-400">文件名：我的简历_最终版3.doc（最终版、最终版2 已被覆盖）</p>
+                  <p className="mt-1 text-center text-[10px] text-zinc-300">* 简历上有些地方，把鼠标放上去（或点一下）会有惊喜</p>
                 </div>
               )}
 
@@ -966,6 +1142,9 @@ export default function App() {
             sfx.click()
             setDeathId(null)
             setAlarmSet(false)
+            setMailView('offer')
+            setSpamNote(null)
+            setVirus(0)
             setPhase('offer')
           }}
           className="px-10 py-4 bg-rose-400 text-black border-[3px] border-black font-black tracking-widest shadow-[6px_6px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#000] transition-all"

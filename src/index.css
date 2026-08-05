@@ -148,3 +148,23 @@
     opacity: 0;
   }
 }
+
+/* 病毒：假进度条来回跑 */
+@keyframes loadingbar {
+  from {
+    margin-left: 0;
+  }
+  to {
+    margin-left: 75%;
+  }
+}
+
+/* 病毒：红屏闪烁 */
+@keyframes alarmFlash {
+  0%, 100% {
+    background-color: #000;
+  }
+  50% {
+    background-color: #450a0a;
+  }
+}
