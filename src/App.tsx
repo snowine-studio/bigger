@@ -129,7 +129,7 @@ function MuteBtn() {
   )
 }
 
-type Phase = 'intro' | 'offer' | 'playing' | 'interlude' | 'ending' | 'death'
+type Phase = 'intro' | 'offer' | 'moments' | 'alarm' | 'playing' | 'interlude' | 'ending' | 'death'
 
 // 死法图鉴（localStorage）
 const DEATHS_KEY = 'zdyld_deaths'
@@ -342,6 +342,8 @@ export default function App() {
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
+  const [showPortfolio, setShowPortfolio] = useState(false) // offer 附件预览
+  const [alarmSet, setAlarmSet] = useState(false) // 闹钟是否改到 7:00
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
   const afterTakeover = useRef<(() => void) | null>(null)
@@ -434,6 +436,7 @@ export default function App() {
     setTakeover(false)
     setZipFx(false)
     lastChosenRef.current = ''
+    setShowPortfolio(false)
     setPhase('playing')
     startRound('r1')
   }
@@ -542,6 +545,7 @@ export default function App() {
           onClick={() => {
             sfx.stopBgm()
             sfx.click()
+            setAlarmSet(false)
             setPhase('offer')
           }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
@@ -553,37 +557,192 @@ export default function App() {
     )
   }
 
-  // ─────────────── 录用通知书（前情提要） ───────────────
+  // ─────────────── 前情 1/3：那封 offer 邮件 ───────────────
   if (phase === 'offer') {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-6 p-6">
-        <div className="max-w-md w-full bg-white text-black border-4 border-black shadow-[10px_10px_0_#e60012] p-6 relative animate-[fadeIn_.5s_ease]">
-          <div className="text-center font-black text-xl tracking-[0.3em] border-b-2 border-black pb-3">录用通知书</div>
-          <div className="mt-4 space-y-3 text-sm leading-relaxed">
-            <p>经评估，我司认为你的作品集<strong>极具潜力</strong>，决定录用你为设计师（试用期）。</p>
-            <p className="text-zinc-500 text-xs">（你的作品集包含：课堂作业 ×3、表情包合集 ×1、给亲戚店里做的招牌 ×1）</p>
-            <p className="text-zinc-500 text-xs">（但 HR 说：就是看重你的潜力）</p>
-            <p className="font-bold">当晚，你把通知书截图发了朋友圈，配文「新的开始 💪」，设为分组可见。</p>
-            <p className="font-bold">闹钟从 9:00 调到了 7:00。</p>
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-5 p-4">
+        <div className="max-w-lg w-full bg-white text-black rounded-xl border-[3px] border-black shadow-[8px_8px_0_#1e50a2] overflow-hidden animate-[fadeIn_.5s_ease]">
+          {/* 邮件头部 */}
+          <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 text-xs text-zinc-500 flex justify-between">
+            <span>📧 收件箱（1）</span>
+            <span>昨天 18:42</span>
           </div>
-          <div className="mt-4 flex items-end justify-between">
-            <div className="text-xs text-zinc-500">
-              宏图伟业广告有限公司
-              <br />
-              人力资源部
-            </div>
-            <div className="w-16 h-16 rounded-full border-4 border-[#e60012] text-[#e60012] flex items-center justify-center font-black text-sm rotate-[-12deg]">录用</div>
+          <div className="px-5 py-3 border-b border-zinc-200 text-xs space-y-1">
+            <div><span className="text-zinc-400">发件人：</span>宏图伟业广告 · 人事部 &lt;hr@htwy-ad.cn&gt;</div>
+            <div><span className="text-zinc-400">主题：</span><span className="font-black">【Offer】设计师（试用期）｜欢迎加入</span></div>
+          </div>
+          {/* 正文 */}
+          <div className="px-5 py-4 text-sm space-y-3 leading-relaxed">
+            <p>同学，你好：</p>
+            <p>你的作品我们都看了。<strong>就是看重你的潜力。</strong></p>
+            <p>现正式向你发出 offer：<strong>设计师（试用期）</strong>，明天入职。</p>
+            <p className="text-zinc-500 text-xs">薪资：试用期 4500 元/月，转正后另行面议。</p>
+            {/* 附件：作品集 */}
+            <button
+              onClick={() => {
+                sfx.click()
+                setShowPortfolio(true)
+              }}
+              className="w-full text-left bg-zinc-100 hover:bg-[#ffe800] border-2 border-black px-3 py-2 text-xs font-mono transition-colors"
+            >
+              📎 我的作品集_最终_真的最终.zip（45.2 MB）
+              <span className="float-right text-zinc-400">点击预览</span>
+            </button>
           </div>
         </div>
         <button
           onClick={() => {
             sfx.click()
-            startGame()
+            setPhase('moments')
           }}
           className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1e50a2] transition-all"
         >
-          接受 offer，明天入职 →
+          接受 offer →
         </button>
+
+        {/* 作品集附件预览 */}
+        {showPortfolio && (
+          <div
+            onClick={() => setShowPortfolio(false)}
+            className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center gap-3 p-6 cursor-pointer"
+          >
+            <div className="text-zinc-400 text-xs font-mono">我的作品集_最终_真的最终.zip · 预览（5 个文件）</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-2xl">
+              {/* 课堂作业 ×3 */}
+              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                <div className="aspect-square bg-zinc-200 flex items-center justify-center relative overflow-hidden">
+                  <div className="absolute w-1/2 h-1 bg-black rotate-12" />
+                  <div className="absolute w-2 h-2 bg-black rounded-full left-3 top-3" />
+                  <div className="absolute w-2 h-2 bg-black rounded-full right-4 bottom-5" />
+                </div>
+                <div className="text-[10px] font-mono p-1">点线面构成练习.ai</div>
+              </div>
+              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                <div className="aspect-square grid grid-cols-3">
+                  {['#e60012', '#ffe800', '#1e50a2', '#ff2e88', '#0d9488', '#000', '#ffe800', '#1e50a2', '#e60012'].map((c, i) => (
+                    <div key={i} style={{ background: c }} />
+                  ))}
+                </div>
+                <div className="text-[10px] font-mono p-1">色彩构成作业.ai</div>
+              </div>
+              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                <div className="aspect-square bg-white flex items-center justify-center">
+                  <span className="font-black text-black" style={{ fontSize: '3rem' }}>永</span>
+                </div>
+                <div className="text-[10px] font-mono p-1">字体练习_永字八法.ai</div>
+              </div>
+              {/* 表情包合集 */}
+              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b]">
+                <div className="aspect-square grid grid-cols-3 place-items-center text-2xl bg-zinc-50">
+                  {['😂', '🔥', '👍', '😭', '🙏', '💪', '🐶', '💰', '✨'].map((e, i) => (
+                    <span key={i}>{e}</span>
+                  ))}
+                </div>
+                <div className="text-[10px] font-mono p-1">表情包合集（精品）.zip</div>
+              </div>
+              {/* 亲戚招牌 */}
+              <div className="bg-white border-2 border-black p-1 shadow-[4px_4px_0_#52525b] col-span-2">
+                <div className="aspect-[3/1] bg-[#e60012] flex items-center justify-center border-2 border-black" style={{ boxShadow: 'inset 0 0 0 2px #ffe800' }}>
+                  <span className="font-black text-[#ffe800] text-xl md:text-2xl tracking-widest" style={{ textShadow: '2px 2px 0 #000' }}>
+                    老王五金建材 · 电话 138XXXX8888
+                  </span>
+                </div>
+                <div className="text-[10px] font-mono p-1">给二舅店里做的招牌（实物已安装）.psd</div>
+              </div>
+            </div>
+            <div className="text-zinc-500 text-xs">点按任意处关闭</div>
+          </div>
+        )}
+        <MuteBtn />
+      </div>
+    )
+  }
+
+  // ─────────────── 前情 2/3：当晚的朋友圈 ───────────────
+  if (phase === 'moments') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-5 p-4">
+        <div className="max-w-md w-full bg-white text-black rounded-xl border-[3px] border-black shadow-[8px_8px_0_#ff2e88] overflow-hidden animate-[fadeIn_.5s_ease]">
+          <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 text-xs text-zinc-500">朋友圈</div>
+          <div className="p-4 flex gap-3">
+            <div className="w-10 h-10 shrink-0 rounded bg-[#ff2e88] border-2 border-black flex items-center justify-center font-black text-white">我</div>
+            <div className="flex-1 space-y-2">
+              <div className="font-black text-sm">我</div>
+              <div className="text-sm">新的开始 💪</div>
+              {/* 配图：offer 邮件截图 */}
+              <div className="w-2/3 bg-white border-2 border-black shadow-[3px_3px_0_#000] p-2">
+                <div className="bg-zinc-100 border border-zinc-300 px-2 py-1 text-[9px] text-zinc-500">📧 收件箱（1）</div>
+                <div className="text-[10px] font-black mt-1">【Offer】设计师（试用期）｜欢迎加入</div>
+                <div className="text-[9px] text-zinc-400">就是看重你的潜力。</div>
+              </div>
+              <div className="text-xs text-zinc-400 flex items-center gap-2">
+                <span>10 分钟前</span>
+                <span className="border border-zinc-300 rounded px-1">👥 部分朋友可见</span>
+              </div>
+              <div className="bg-zinc-100 rounded p-2 text-xs space-y-1">
+                <div><span className="font-bold text-[#1e50a2]">妈妈</span> ❤️　<span className="font-bold text-[#1e50a2]">二姨</span> ❤️　<span className="font-bold text-[#1e50a2]">大学室友·阿哲</span> ❤️</div>
+                <div><span className="font-bold text-[#1e50a2]">阿哲：</span>可以啊！哪个公司？</div>
+                <div><span className="font-bold">我</span> 回复 <span className="font-bold text-[#1e50a2]">阿哲：</span>说了你也没听过哈哈（其实我也没听过）</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('alarm')
+          }}
+          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1e50a2] transition-all"
+        >
+          放下手机 →
+        </button>
+        <MuteBtn />
+      </div>
+    )
+  }
+
+  // ─────────────── 前情 3/3：闹钟 ───────────────
+  if (phase === 'alarm') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center gap-5 p-4">
+        <div className="max-w-md w-full bg-black rounded-2xl border-[3px] border-zinc-700 shadow-[8px_8px_0_#0d9488] overflow-hidden animate-[fadeIn_.5s_ease]">
+          <div className="px-4 py-2 text-xs text-zinc-500 flex justify-between border-b border-zinc-800">
+            <span>闹钟</span>
+            <span>23:58</span>
+          </div>
+          <div className="p-5 flex items-center justify-between">
+            <div>
+              <div className="font-black text-5xl tracking-wider text-white transition-all">
+                {alarmSet ? '07:00' : '09:00'}
+              </div>
+              <div className="text-xs text-zinc-500 mt-1">{alarmSet ? '上班第一天（新增）' : '每天'}</div>
+            </div>
+            {/* 开关：玩家亲手拨到 7:00 */}
+            <button
+              onClick={() => {
+                sfx.click()
+                setAlarmSet((v) => !v)
+              }}
+              className={`w-16 h-9 rounded-full border-2 border-black relative transition-colors ${alarmSet ? 'bg-lime-400' : 'bg-zinc-600'}`}
+            >
+              <div
+                className={`absolute top-0.5 w-7 h-7 rounded-full bg-white border-2 border-black transition-all ${alarmSet ? 'left-8' : 'left-0.5'}`}
+              />
+            </button>
+          </div>
+          {alarmSet && <div className="px-5 pb-4 text-xs text-teal-300 animate-[fadeIn_.4s_ease]">已改为 07:00 · 上班第一天</div>}
+        </div>
+        {alarmSet && (
+          <button
+            onClick={() => {
+              sfx.click()
+              startGame()
+            }}
+            className="px-10 py-4 bg-[#ffe800] text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#e60012] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#e60012] transition-all animate-[fadeIn_.4s_ease]"
+          >
+            第一天，上班 →
+          </button>
+        )}
         <MuteBtn />
       </div>
     )
@@ -627,6 +786,7 @@ export default function App() {
           onClick={() => {
             sfx.click()
             setDeathId(null)
+            setAlarmSet(false)
             setPhase('offer')
           }}
           className="px-10 py-4 bg-rose-400 text-black border-[3px] border-black font-black tracking-widest shadow-[6px_6px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#000] transition-all"
