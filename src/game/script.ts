@@ -444,6 +444,11 @@ export const deaths: Record<string, Death> = {
     title: 'AI 死',
     reason: '你把一切都喂给了 AI。经评估，你的岗位已无存续必要。',
   },
+  slip: {
+    no: 'No.006',
+    title: '手滑死',
+    reason: '你把「老板好油啊」发进了 47 人的公司大群。撤回时限两分钟，公司的网卡了三分钟。',
+  },
 }
 
 // 过程中攒下的"债务"，在结尾一并结算

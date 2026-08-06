@@ -16,6 +16,8 @@ import {
   type Speaker,
 } from './game/script'
 import * as sfx from './game/audio'
+import bossRaw from './assets/boss_raw.jpg'
+import bossPro from './assets/boss_pro.jpg'
 
 /** 打包 zip 三段式：看文件（停留）→ 点打包压成 zip → 点发送嗖地飞走 */
 function ZipOverlay({ onDone }: { onDone: () => void }) {
@@ -151,10 +153,77 @@ function Secret({ children }: { children: React.ReactNode }) {
   )
 }
 
-type Phase = 'intro' | 'offer' | 'moments' | 'alarm' | 'playing' | 'interlude' | 'ending' | 'death'
+type Phase =
+  | 'intro'
+  | 'offer'
+  | 'moments'
+  | 'alarm'
+  | 'onboard'
+  | 'setup'
+  | 'day2'
+  | 'retouch'
+  | 'folderGag'
+  | 'promotion'
+  | 'gallery'
+  | 'playing'
+  | 'interlude'
+  | 'ending'
+  | 'death'
 
 // 死法图鉴（localStorage）
 const DEATHS_KEY = 'zdyld_deaths'
+// 结局图鉴 + 通关标记（二周目快进用）
+const ENDINGS_KEY = 'zdyld_endings'
+const COMPLETED_KEY = 'zdyld_completed'
+
+function getUnlockedEndings(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(ENDINGS_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+function unlockEnding(id: string): void {
+  const list = getUnlockedEndings()
+  if (!list.includes(id)) {
+    list.push(id)
+    try {
+      localStorage.setItem(ENDINGS_KEY, JSON.stringify(list))
+    } catch {
+      /* 隐私模式忽略 */
+    }
+  }
+}
+function hasCompleted(): boolean {
+  try {
+    return localStorage.getItem(COMPLETED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function markCompleted(): void {
+  try {
+    localStorage.setItem(COMPLETED_KEY, '1')
+  } catch {
+    /* ignore */
+  }
+}
+
+/** 二周目快进按钮：跳过固定剧情 */
+function SkipBtn({ onSkip }: { onSkip: () => void }) {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        sfx.click()
+        onSkip()
+      }}
+      className="fixed right-3 top-3 z-[70] border-2 border-black bg-white px-3 py-1.5 text-xs font-black text-black shadow-[3px_3px_0_#000] hover:bg-[#ffe800] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none"
+    >
+      ⏭ 跳过剧情
+    </button>
+  )
+}
 function getUnlockedDeaths(): string[] {
   try {
     return JSON.parse(localStorage.getItem(DEATHS_KEY) ?? '[]')
@@ -369,6 +438,10 @@ export default function App() {
   const [virus, setVirus] = useState(0) // 病毒阶段：0 无 / 1 运行中 / 2 offer 已销毁
   const [spamNote, setSpamNote] = useState<string | null>(null) // 点了垃圾邮件后的吐槽
   const [alarmSet, setAlarmSet] = useState(false) // 闹钟是否改到 7:00
+  const [docOpen, setDocOpen] = useState<string | null>(null) // 入职第一天：打开的规章制度
+  const [retouchIter, setRetouchIter] = useState(0) // P 图关：已认真 P 了几版
+  const [retouchPro, setRetouchPro] = useState(false) // P 图关：佛光版已交付
+  const [retouchFunnel, setRetouchFunnel] = useState<string[]>([]) // P 图关：已用掉的一次性选项
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
   const afterTakeover = useRef<(() => void) | null>(null)
@@ -411,6 +484,12 @@ export default function App() {
     }, 2400)
     return () => clearTimeout(t)
   }, [virus])
+
+  // 到达结局/死亡 → 标记已通关（开启二周目快进）+ 记录结局图鉴
+  useEffect(() => {
+    if (phase === 'ending' || phase === 'death') markCompleted()
+    if (phase === 'ending' && endingId) unlockEnding(endingId)
+  }, [phase, endingId])
 
   /** 逐条把消息推进聊天框；点聊天区可快进 */
   const pushMessages = useCallback((msgs: ChatMsg[], done: () => void) => {
@@ -472,6 +551,10 @@ export default function App() {
     setZipFx(false)
     lastChosenRef.current = ''
     setAttachment(null)
+    setDocOpen(null)
+    setRetouchIter(0)
+    setRetouchPro(false)
+    setRetouchFunnel([])
     setPhase('playing')
     startRound('r1')
   }
@@ -575,7 +658,7 @@ export default function App() {
         <div className="bg-[#1e50a2] text-[#ffe800] font-black text-sm md:text-base px-4 py-1 border-2 border-black shadow-[4px_4px_0_#e60012] rotate-[0.5deg]">
           在吗？Logo 再大一点。
         </div>
-        <div className="text-zinc-500 text-xs">DAY 1 · 五个结局 · 六种死法 · 大约 3 分钟</div>
+        <div className="text-zinc-500 text-xs">五个结局 · 七种死法 · 大约 5 分钟</div>
         <button
           onClick={() => {
             sfx.stopBgm()
@@ -583,11 +666,24 @@ export default function App() {
             setAlarmSet(false)
             setMailView('offer')
             setSpamNote(null)
+            setDocOpen(null)
+            setRetouchIter(0)
+            setRetouchPro(false)
+            setRetouchFunnel([])
             setPhase('offer')
           }}
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
           开始
+        </button>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('gallery')
+          }}
+          className="px-6 py-2.5 bg-white text-black border-[3px] border-black font-black text-sm tracking-widest shadow-[4px_4px_0_#0d9488] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#0d9488] transition-all"
+        >
+          🏆 图鉴
         </button>
         <MuteBtn />
       </div>
@@ -1013,6 +1109,7 @@ export default function App() {
           </div>
         )}
         <MuteBtn />
+        {hasCompleted() && virus === 0 && <SkipBtn onSkip={() => setPhase('moments')} />}
       </div>
     )
   }
@@ -1056,6 +1153,7 @@ export default function App() {
           放下手机 →
         </button>
         <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => setPhase('alarm')} />}
       </div>
     )
   }
@@ -1095,13 +1193,484 @@ export default function App() {
           <button
             onClick={() => {
               sfx.click()
-              startGame()
+              setDocOpen(null)
+              setRetouchIter(0)
+              setRetouchPro(false)
+              setRetouchFunnel([])
+              setPhase('onboard')
             }}
             className="px-10 py-4 bg-[#ffe800] text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#e60012] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#e60012] transition-all animate-[fadeIn_.4s_ease]"
           >
             第一天，上班 →
           </button>
         )}
+        <MuteBtn />
+        {hasCompleted() && (
+          <SkipBtn
+            onSkip={() => {
+              setDocOpen(null)
+              setRetouchIter(0)
+              setRetouchPro(false)
+              setRetouchFunnel([])
+              setPhase('onboard')
+            }}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // ─────────────── 入职第一天：工位、Ray、吴所谓、规章制度 ───────────────
+  if (phase === 'onboard') {
+    const docs = [
+      { id: 'd1', name: '员工行为规范（试行）（第七次修订）.doc', content: '共 87 页。第 3 页：上班时间禁止睡觉。第 4-87 页：睡觉的定义。' },
+      { id: 'd2', name: '考勤管理办法补充说明之补充说明.doc', content: '迟到 1 分钟扣 10 元。加班 1 小时，奖励一句「辛苦了」。' },
+      { id: 'd3', name: '办公室绿植浇水轮值表（强制执行）.xlsx', content: '你排在每周三。那盆绿萝上周已经死了。表不会改。' },
+      { id: 'd4', name: '绩效考核方案_v11_最终_以此为假.doc', content: '以这份为准。注：文件名「以此为假」系笔误，应为「以此为准」。懒得改。' },
+      { id: 'd5', name: '关于规范文件命名的暂行规定.pdf', content: '全文一页：文件命名须包含日期、版本、负责人。（本文件文件名：命名规范_最终_新_旧版备用.pdf）' },
+    ]
+    const openDoc = docs.find((d) => d.id === docOpen)
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center gap-5 p-4 py-8">
+        <div className="text-xs tracking-[0.5em] text-zinc-500">入职第一天 · 上午 9:07</div>
+        {/* 工位卡 */}
+        <div className="max-w-md w-full bg-white text-black border-[3px] border-black shadow-[8px_8px_0_#1d6fd1] p-4 animate-[fadeIn_.5s_ease]">
+          <div className="flex items-center justify-between border-b-2 border-black pb-2">
+            <span className="font-black">工牌 · 初级设计师</span>
+            <span className="text-xs text-zinc-400 font-mono">No. 实习生plus</span>
+          </div>
+          <div className="mt-2 text-xs space-y-0.5 text-zinc-600">
+            <p>工作内容：</p>
+            <p>· 图片处理　· 文件整理</p>
+            <p>· 尺寸调整　· 协助设计师完成项目</p>
+            <p className="text-[10px] text-zinc-400 pt-1">* 表现优秀者，有机会参与正式设计项目。</p>
+          </div>
+        </div>
+        {/* Ray 登场 */}
+        <div className="max-w-md w-full space-y-2">
+          <ChatBubble msg={{ from: 'director', text: '新人？' }} />
+          <ChatBubble msg={{ from: 'director', text: '刚来的？' }} />
+          <ChatBubble msg={{ from: 'director', text: '先让吴所谓带你熟悉公司流程。' }} />
+          {/* 吴所谓 */}
+          <div className="flex justify-start">
+            <div className="flex gap-2 max-w-[85%]">
+              <div className="w-8 h-8 shrink-0 rounded-full bg-zinc-500 border border-zinc-400 flex items-center justify-center text-xs font-bold text-white">吴</div>
+              <div>
+                <div className="text-[10px] text-zinc-500 mb-1">前辈 · 吴所谓</div>
+                <div className="bg-white text-black border-2 border-black px-3 py-2 text-sm shadow-[3px_3px_0_#52525b]">
+                  跟我来。先把这些看了。看完签个字，表示你看完了。（不用真看，没人看得完。）
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* 规章制度文件堆 */}
+        <div className="max-w-md w-full space-y-2">
+          {docs.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => {
+                sfx.click()
+                setDocOpen(docOpen === d.id ? null : d.id)
+              }}
+              className={`w-full text-left px-3 py-2 border-2 border-black font-mono text-xs transition-all ${
+                docOpen === d.id ? 'bg-[#ffe800] text-black shadow-[2px_2px_0_#000]' : 'bg-white text-black shadow-[4px_4px_0_#52525b] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#52525b]'
+              }`}
+            >
+              📄 {d.name}
+            </button>
+          ))}
+          {openDoc && (
+            <div className="border-2 border-dashed border-zinc-500 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 animate-[fadeIn_.3s_ease]">
+              {openDoc.content}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('setup')
+          }}
+          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1d6fd1] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1d6fd1] transition-all"
+        >
+          去领电脑 →
+        </button>
+        <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => setPhase('setup')} />}
+      </div>
+    )
+  }
+
+  // ─────────────── 入职第一天：装软件蒙太奇 ───────────────
+  if (phase === 'setup') {
+    const log = [
+      ['09:30', '领到电脑。开机用了 6 分钟。'],
+      ['10:15', '安装 Photoshop 2019（公司统一破解版）。'],
+      ['11:40', '安装失败。重启（第 1 次）。'],
+      ['14:00', 'IT 说下午来。下午没来。'],
+      ['16:30', '重启（第 3 次）。能用了。'],
+      ['18:47', '吴所谓：「第一天都这样。明天见。」'],
+    ]
+    return (
+      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-5 p-6">
+        <div className="max-w-md w-full space-y-2.5 font-mono text-sm">
+          {log.map(([t, s], i) => (
+            <div key={t} className="flex gap-3 animate-[fadeIn_.4s_ease_both]" style={{ animationDelay: `${i * 0.45}s` }}>
+              <span className="text-zinc-600 shrink-0">{t}</span>
+              <span className="text-zinc-300">{s}</span>
+            </div>
+          ))}
+        </div>
+        <div className="text-zinc-500 text-sm tracking-[0.5em] animate-[fadeIn_.8s_ease_both]" style={{ animationDelay: '2.8s' }}>
+          第一天，结束。
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('day2')
+          }}
+          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#0d9488] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#0d9488] transition-all animate-[fadeIn_.5s_ease_both]"
+          style={{ animationDelay: '3.2s' }}
+        >
+          第二天，上班 →
+        </button>
+        <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => setPhase('day2')} />}
+      </div>
+    )
+  }
+
+  // ─────────────── 第二天：Ray 派活 ───────────────
+  if (phase === 'day2') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center gap-5 p-4 py-8">
+        <div className="text-xs tracking-[0.5em] text-zinc-500">第二天 · 上午 10:02</div>
+        <div className="max-w-md w-full space-y-2">
+          <ChatBubble msg={{ from: 'director', text: '简单任务。' }} />
+          <ChatBubble msg={{ from: 'director', text: '帮客户整理一下照片。改改尺寸，换个格式。' }} />
+          <ChatBubble msg={{ from: 'system', text: '【客户需求】老板个人形象照优化' }} />
+        </div>
+        {/* 需求清单 */}
+        <div className="max-w-md w-full bg-white text-black border-[3px] border-black shadow-[8px_8px_0_#e60012] p-4 animate-[fadeIn_.5s_ease]">
+          <div className="font-black text-sm border-b-2 border-black pb-2">要求（客户原话）：</div>
+          <ul className="mt-2 text-xs space-y-1.5 text-zinc-700">
+            <li>1. 看起来年轻一点</li>
+            <li>2. 看起来成功一点</li>
+            <li>3. 看起来有亲和力一点</li>
+            <li>4. 皮肤感觉要完美</li>
+            <li>5. 但是整体不能显得油腻，要精神</li>
+            <li>6. 背景太乱了，把老板抠出来换个高大上的背景</li>
+          </ul>
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('retouch')
+          }}
+          className="px-10 py-4 bg-[#ffe800] text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#e60012] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#e60012] transition-all"
+        >
+          📎 打开附件：老板照片.jpg →
+        </button>
+        <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => setPhase('retouch')} />}
+      </div>
+    )
+  }
+
+  // ─────────────── 第二天：P 图教学关 ───────────────
+  if (phase === 'retouch') {
+    const feedbacks = [
+      '不错不错！但是……能不能再精神一点？',
+      '有进步！这样：像刚跑完马拉松，但是马上还能开会。你懂我意思吧？',
+      'emmm 感觉对了又好像没对。要不再试试？',
+    ]
+    const proReady = retouchIter >= 2 || hasCompleted()
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center gap-4 p-4 py-8">
+        <div className="text-xs tracking-[0.5em] text-zinc-500">第二天 · 老板照片.jpg</div>
+        {/* 照片 */}
+        <div className={`relative border-[3px] border-black overflow-hidden transition-all ${retouchPro ? 'shadow-[0_0_60px_#ffe800]' : 'shadow-[8px_8px_0_#52525b]'}`}>
+          <img
+            src={retouchPro ? bossPro : bossRaw}
+            alt="老板照片"
+            className="w-56 md:w-72 block"
+          />
+          <span className="absolute left-1 top-1 bg-black/70 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
+            {retouchPro ? '老板照片_佛光终版.psd' : retouchIter > 0 ? `老板照片_v${retouchIter}.psd` : '老板照片.jpg（原图 · 2.1MB）'}
+          </span>
+        </div>
+        {/* 客户反馈 */}
+        <div className="max-w-md w-full space-y-2">
+          {retouchIter > 0 &&
+            feedbacks.slice(0, retouchIter).map((f, i) => (
+              <div key={i} className="animate-[fadeIn_.4s_ease]">
+                <ChatBubble msg={{ from: 'client', text: f }} />
+              </div>
+            ))}
+          {retouchIter >= 3 && <ChatBubble msg={{ from: 'system', text: '常规手段已用尽。' }} />}
+          {retouchPro && (
+            <>
+              <div className="animate-[fadeIn_.4s_ease]"><ChatBubble msg={{ from: 'client', text: '这个……' }} /></div>
+              <div className="animate-[fadeIn_.4s_ease]"><ChatBubble msg={{ from: 'client', text: '很有冲击力，就要这样的。', hot: true }} /></div>
+            </>
+          )}
+        </div>
+        {/* 选项 */}
+        {!retouchPro ? (
+          <div className="max-w-md w-full grid grid-cols-2 gap-2">
+            {retouchIter < 3 && (
+              <button
+                onClick={() => {
+                  sfx.click()
+                  setRetouchIter((v) => v + 1)
+                }}
+                className="col-span-2 bg-white text-black border-[3px] border-black px-3 py-3 font-black shadow-[5px_5px_0_#1d6fd1] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1d6fd1] transition-all"
+              >
+                认真 P 一版
+                <span className="block text-[10px] font-normal text-zinc-500">磨皮、去皱、拉曲线</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (!proReady) return
+                sfx.stamp()
+                setRetouchPro(true)
+              }}
+              className={`col-span-2 border-[3px] border-black px-3 py-3 font-black transition-all ${
+                proReady
+                  ? 'bg-[#ffe800] text-black shadow-[5px_5px_0_#e60012] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#e60012]'
+                  : 'bg-zinc-800 text-zinc-600 shadow-none cursor-not-allowed'
+              }`}
+            >
+              佛光普照版（终极大招）
+              <span className="block text-[10px] font-normal">{proReady ? '大道至简，大音希声' : '（先认真 P 两版再说）'}</span>
+            </button>
+            {!retouchFunnel.includes('raw') && (
+              <button
+                onClick={() => {
+                  sfx.click()
+                  setRetouchFunnel((v) => [...v, 'raw'])
+                  setRetouchIter((v) => v) // 留在本关
+                }}
+                className="bg-zinc-900 text-zinc-300 border-2 border-zinc-600 px-3 py-2.5 text-sm font-bold hover:border-zinc-400 transition-colors"
+              >
+                把原图发回去
+                <span className="block text-[10px] font-normal text-zinc-500">「其实原图最精神」</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
+                sfx.drop()
+                setRetouchFunnel((v) => [...v, 'slip'])
+                timers.current.push(
+                  setTimeout(() => {
+                    setDeathId('slip')
+                    setPhase('death')
+                  }, 2000),
+                )
+              }}
+              className="bg-zinc-900 text-zinc-300 border-2 border-zinc-600 px-3 py-2.5 text-sm font-bold hover:border-red-500 hover:text-red-300 transition-colors"
+            >
+              跟吴所谓吐槽老板
+              <span className="block text-[10px] font-normal text-zinc-500">（群里人少，没事的）</span>
+            </button>
+            {retouchFunnel.includes('raw') && !retouchFunnel.includes('slip') && (
+              <div className="text-xs text-zinc-500 px-1 animate-[fadeIn_.3s_ease]">客户：「再想想。」</div>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={() => {
+              sfx.send()
+              setPhase('folderGag')
+            }}
+            className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#1d6fd1] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#1d6fd1] transition-all animate-[fadeIn_.4s_ease]"
+          >
+            📎 发送「老板照片_佛光终版.psd」→
+          </button>
+        )}
+        {/* 手滑实况 */}
+        {retouchFunnel.includes('slip') && !retouchPro && (
+          <div className="fixed inset-0 z-[80] bg-black/90 flex flex-col items-center justify-center gap-3 p-6 font-mono">
+            <p className="text-sm text-zinc-300 animate-pulse">已发送至「宏图伟业一家人（47）」</p>
+            <p className="text-sm text-red-500 animate-pulse">撤回失败：网络异常</p>
+            <p className="text-xs text-zinc-600">（47 个人里，有老板。）</p>
+          </div>
+        )}
+        <MuteBtn />
+      </div>
+    )
+  }
+
+  // ─────────────── 文件夹：最终只是一个建议 ───────────────
+  if (phase === 'folderGag') {
+    const files = [
+      '老板照片_最终版.psd',
+      '老板照片_最终版2.psd',
+      '老板照片_最终版3.psd',
+      '老板照片_最终确认版.psd',
+      '老板照片_最终确认版（不要动）.psd',
+      '老板照片_最终确认版（真的不要动）.psd',
+    ]
+    return (
+      <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-5 p-6">
+        <div className="text-xs tracking-[0.5em] text-zinc-500">交付之后 · 你的文件夹</div>
+        <div className="max-w-md w-full space-y-1.5 font-mono text-sm">
+          {files.map((f, i) => (
+            <div key={f} className="text-zinc-300 animate-[fadeIn_.4s_ease_both]" style={{ animationDelay: `${i * 0.5}s` }}>
+              📄 {f}
+            </div>
+          ))}
+        </div>
+        <div
+          className="max-w-md text-center text-[#ffe800] font-black text-lg leading-relaxed animate-[fadeIn_.8s_ease_both]"
+          style={{ animationDelay: '3.4s', textShadow: '2px 2px 0 #e60012' }}
+        >
+          你第一次知道：
+          <br />
+          设计文件里的「最终」，可能只是一个建议。
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('promotion')
+          }}
+          className="px-10 py-4 bg-lime-300 text-black border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#0d9488] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#0d9488] transition-all animate-[fadeIn_.5s_ease_both]"
+          style={{ animationDelay: '4s' }}
+        >
+          第二天，结束 →
+        </button>
+        <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => setPhase('promotion')} />}
+      </div>
+    )
+  }
+
+  // ─────────────── 任务变更：可以面对客户了 ───────────────
+  if (phase === 'promotion') {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center gap-5 p-4 py-8">
+        <div className="text-xs tracking-[0.5em] text-zinc-500">第三天 · 上午 9:15</div>
+        <div className="max-w-md w-full space-y-2">
+          <ChatBubble msg={{ from: 'director', text: '这次工作还行。' }} />
+          <ChatBubble msg={{ from: 'director', text: '你可以直接面对客户了。试试帮他们做点物料设计吧。' }} />
+        </div>
+        {/* 任务卡变更 */}
+        <div className="max-w-md w-full bg-white text-black border-[3px] border-black shadow-[8px_8px_0_#ff2e88] p-4 animate-[fadeIn_.5s_ease]">
+          <div className="font-black text-sm border-b-2 border-black pb-2">你的任务</div>
+          <p className="mt-2 text-sm text-zinc-400 line-through">给客户老板 P 照片</p>
+          <p className="mt-1 text-base font-black animate-[fadeIn_.6s_ease_both]" style={{ animationDelay: '0.8s' }}>
+            → 物料设计：宏达国际 · 宣传海报
+          </p>
+          <p className="mt-1 text-[10px] text-zinc-400">* 恭喜你，参与了正式设计项目。</p>
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            startGame()
+          }}
+          className="px-10 py-4 bg-[#e60012] text-[#ffe800] border-[3px] border-black font-black text-lg tracking-widest shadow-[6px_6px_0_#ffe800] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#ffe800] transition-all"
+        >
+          接活 →
+        </button>
+        <MuteBtn />
+        {hasCompleted() && <SkipBtn onSkip={() => startGame()} />}
+      </div>
+    )
+  }
+
+  // ─────────────── 图鉴：毕业与生存 ───────────────
+  if (phase === 'gallery') {
+    const dUnlocked = getUnlockedDeaths()
+    const eUnlocked = getUnlockedEndings()
+    const deathHints: Record<string, string> = {
+      virus: '垃圾箱里有封不该点的邮件',
+      reason: '设计理论博大精深',
+      leapfrog: '上面的上面，不是你的上面',
+      honest: '乙方行业，有些话不能说',
+      blackout: 'IT 部提醒过你的',
+      ai: 'AI 平均响应 5 分钟',
+      slip: '群里人少，没事的？',
+    }
+    const endingHints: Record<string, string> = {
+      hand: '关掉 AI，亲手改',
+      hand_trust: '有人欠你一个人情',
+      hand_money: '风险要有价格',
+      chaos: '让他自己选',
+      ignore: '……',
+    }
+    const deathList = Object.entries(deaths).sort((a, b) => a[1].no.localeCompare(b[1].no))
+    const endingList = Object.entries(endings)
+    const allDone = dUnlocked.length >= deathList.length && eUnlocked.length >= endingList.length
+    return (
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center gap-6 p-4 py-8">
+        <div className="newugly-ending select-none text-center">图鉴</div>
+        <div className="text-xs text-zinc-500 tracking-widest">
+          毕业进度 {dUnlocked.length}/{deathList.length} · 活下来的样子 {eUnlocked.length}/{endingList.length}
+        </div>
+        {allDone && (
+          <div className="border-[3px] border-black bg-[#ffe800] px-4 py-2 font-black text-black shadow-[6px_6px_0_#e60012] rotate-[-1deg] animate-[fadeIn_.5s_ease]">
+            称号解锁：广告圈活化石 🏆
+          </div>
+        )}
+        {/* 死法区 */}
+        <div className="w-full max-w-2xl">
+          <p className="text-sm font-black text-zinc-400 mb-2">菜鸟设计师的一万种死法</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {deathList.map(([id, d], i) => {
+              const got = dUnlocked.includes(id)
+              return got ? (
+                <div
+                  key={id}
+                  className="bg-white text-black border-2 border-black p-3 shadow-[4px_4px_0_#e60012]"
+                  style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}
+                >
+                  <p className="font-mono text-[10px] text-zinc-400">{d.no}</p>
+                  <p className="font-black text-sm">{d.title}</p>
+                  <p className="mt-1 text-[10px] text-zinc-500 leading-snug">{d.reason}</p>
+                </div>
+              ) : (
+                <div
+                  key={id}
+                  className="border-2 border-dashed border-zinc-700 p-3 text-zinc-600"
+                  style={{ transform: `rotate(${i % 2 ? 1.2 : -1.2}deg)` }}
+                >
+                  <p className="font-mono text-[10px]">{d.no}</p>
+                  <p className="font-black text-sm">？？？</p>
+                  <p className="mt-1 text-[10px]">提示：{deathHints[id] ?? '继续作死'}</p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        {/* 结局区 */}
+        <div className="w-full max-w-2xl">
+          <p className="text-sm font-black text-zinc-400 mb-2">活下来的样子</p>
+          <div className="flex flex-wrap gap-3">
+            {endingList.map(([id, e]) => {
+              const got = eUnlocked.includes(id)
+              return got ? (
+                <div key={id} className="flex h-24 w-24 items-center justify-center rounded-full border-4 border-[#e60012] bg-[#e60012]/10 p-2 text-center rotate-[-6deg]">
+                  <span className="text-[10px] font-black text-[#ff6b6b] leading-tight">{e.title.replace('结局 · ', '')}</span>
+                </div>
+              ) : (
+                <div key={id} className="flex h-24 w-24 flex-col items-center justify-center rounded-full border-2 border-dashed border-zinc-700 p-2 text-center text-zinc-600 rotate-[4deg]">
+                  <span className="text-sm font-black">？</span>
+                  <span className="text-[9px] leading-tight">{endingHints[id] ?? ''}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            sfx.click()
+            setPhase('intro')
+          }}
+          className="px-8 py-3 bg-white text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#0d9488] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#0d9488] transition-all"
+        >
+          ← 返回
+        </button>
         <MuteBtn />
       </div>
     )
@@ -1149,6 +1718,10 @@ export default function App() {
             setMailView('offer')
             setSpamNote(null)
             setVirus(0)
+            setDocOpen(null)
+            setRetouchIter(0)
+            setRetouchPro(false)
+            setRetouchFunnel([])
             setPhase('offer')
           }}
           className="px-10 py-4 bg-rose-400 text-black border-[3px] border-black font-black tracking-widest shadow-[6px_6px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#000] transition-all"
@@ -1164,7 +1737,7 @@ export default function App() {
   if (phase === 'ending' && ending) {
     return (
       <div className="min-h-screen bg-black text-zinc-100 flex flex-col items-center justify-center gap-6 p-8">
-        <div className="text-xs tracking-[0.5em] text-zinc-500 animate-[fadeIn_.5s_ease]">DAY 1 · 你活下来了</div>
+        <div className="text-xs tracking-[0.5em] text-zinc-500 animate-[fadeIn_.5s_ease]">第一个正式项目 · 你活下来了</div>
         <div className="max-w-lg w-full space-y-3 mt-2">
           {ending.lines.map((m, i) => (
             <div key={i} className="animate-[fadeIn_.4s_ease_both]" style={{ animationDelay: `${0.4 + i * 0.75}s` }}>
@@ -1187,7 +1760,7 @@ export default function App() {
           </div>
         )}
         <div className="text-zinc-600 text-sm mt-2 animate-[fadeIn_.5s_ease_both]" style={{ animationDelay: `${1.5 + ending.lines.length * 0.75}s` }}>
-          DAY 2（待续）
+          明天（待续）
         </div>
         <button
           onClick={() => {
@@ -1197,7 +1770,7 @@ export default function App() {
           className="px-8 py-3 bg-[#ffe800] text-black border-[3px] border-black font-black tracking-widest shadow-[5px_5px_0_#1e50a2] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#1e50a2] transition-all animate-[fadeIn_.5s_ease_both]"
           style={{ animationDelay: `${1.7 + ending.lines.length * 0.75}s` }}
         >
-          再过一遍 DAY 1
+          再活一遍
         </button>
         <MuteBtn />
       </div>
@@ -1213,7 +1786,7 @@ export default function App() {
         <section className="flex flex-col flex-1 min-h-0 rounded-xl border border-zinc-800 bg-zinc-900/40">
           <div className="shrink-0 px-4 py-2 border-b border-zinc-800 text-xs text-zinc-500 flex justify-between">
             <span>需求 / 私聊</span>
-            <span className="text-zinc-600">{busy ? '点按可快进' : `DAY 1 · ${round.label}`}</span>
+            <span className="text-zinc-600">{busy ? '点按可快进' : `正式项目 · ${round.label}`}</span>
           </div>
           <div ref={chatBox} onClick={flush} className="flex-1 overflow-y-auto p-3 space-y-3 cursor-pointer">
             {chat.map((m, i) => (
