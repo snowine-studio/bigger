@@ -1722,7 +1722,7 @@ export default function App() {
             setRetouchIter(0)
             setRetouchPro(false)
             setRetouchFunnel([])
-            setPhase('offer')
+            setPhase('intro')
           }}
           className="px-10 py-4 bg-rose-400 text-black border-[3px] border-black font-black tracking-widest shadow-[6px_6px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[3px_3px_0_#000] transition-all"
         >
