@@ -41,8 +41,11 @@ export interface Option {
   ending?: string
   /** 毕业死法 id（菜鸟设计师的一万种死法） */
   death?: string
+  /** 事件类型：normal=日常选择 | surprise=无选择强制 | abyss=延迟触发 */
+  eventType?: 'normal' | 'surprise' | 'abyss'
+  /** 深渊标记：选完后延迟到指定轮次触发 */
+  abyssTag?: string
 }
-
 export interface Round {
   id: string
   label: string
@@ -102,6 +105,11 @@ export const rounds: Record<string, Round> = {
       },
       {
         id: 'C',
+        label: '偷做两个版本：客户版 + 专业版',
+        sub: '一个交差，一个留给自己',
+        canvas: { logoSize: 62 },
+        flags: { twoVersions: true },
+        abyssTag: 'twoVersions', // 深渊标记：延迟到 r3 触发后果
         label: '偷做两个版本：客户版 + 专业版',
         sub: '一个交差，一个留给自己',
         canvas: { logoSize: 62 },
@@ -312,6 +320,131 @@ export const rounds: Record<string, Round> = {
 }
 
 // 第 1 轮选择决定第 2 轮分支
+export function nextRoundId(roundId: string, optionId: string): string | null {
+  if (roundId === 'r1') return optionId === 'C' ? 'r2C' : 'r2A'
+  if (roundId === 'r2A' || roundId === 'r2C') return 'r3'
+  return null
+}
+
+// ════════════════════ 三层事件结构 ════════════════════
+
+/** 突袭事件：无选择，纯叙事+强制后果，打破玩家节奏 */
+export interface SurpriseEvent {
+  id: string
+  weight: number
+  /** 触发条件（可选），返回 true 才入池 */
+  condition?: (flags: Record<string, boolean>) => boolean
+  intro: ChatMsg[]
+  canvas?: Partial<CanvasState>
+  flags?: Record<string, boolean>
+}
+
+/** 突袭事件池：每局随机抽取 0~1 个插入回合之间 */
+export const surpriseEvents: SurpriseEvent[] = [
+  {
+    id: 'powerOutage',
+    weight: 1,
+    intro: [
+      { from: 'system', text: '【突发】整个片区跳闸。' },
+      { from: 'system', text: '你的屏幕黑了三秒。' },
+      { from: 'me', text: '（文件……保存了吗？）' },
+      { from: 'system', text: '来电后，PS 弹出一个恢复窗口。' },
+      { from: 'system', text: '恢复内容：「未命名-1」· 3 分钟前。' },
+    ],
+    canvas: { logoSize: 25 },
+    flags: { nearDeath: true },
+  },
+  {
+    id: 'clientCall',
+    weight: 1,
+    intro: [
+      { from: 'system', text: '【语音来电】客户 · 李总' },
+      { from: 'client', text: '小X啊，我刚跟老板开会。' },
+      { from: 'client', text: '他说了，LOGO还可以再大一点。', hot: true },
+      { from: 'client', text: '你直接改，不用走流程了。' },
+      { from: 'system', text: '电话挂断。你甚至没有机会说「好的」。' },
+    ],
+    canvas: { logoSize: 78 },
+  },
+  {
+    id: 'directorWarning',
+    weight: 1,
+    condition: (flags) => flags.twoVersions === true,
+    intro: [
+      { from: 'director', text: '（私聊）你做的那个「专业版」，客户看到了。' },
+      { from: 'director', text: '（私聊）李总问我们公司是不是有两个设计标准。' },
+      { from: 'director', text: '（私聊）我帮你圆了。下不为例。' },
+      { from: 'system', text: '那个藏在文件夹深处的 v_专业版.psd，突然变得烫手。' },
+    ],
+    flags: { warned: true },
+  },
+  {
+    id: 'printerError',
+    weight: 1,
+    intro: [
+      { from: 'system', text: '【印刷厂紧急通知】' },
+      { from: 'system', text: '您发送的文件因「字体缺失」导致乱码。' },
+      { from: 'system', text: '已自动替换为：微软雅黑。' },
+      { from: 'client', text: '在吗？这版怎么跟之前不一样？？？' },
+      { from: 'me', text: '（你检查文件——字体全被替换了。）' },
+    ],
+    flags: { printerError: true },
+  },
+]
+
+/** 深渊事件：选择时埋下标记，指定轮次触发后续 */
+export interface AbyssEffect {
+  tag: string
+  triggerRound: string
+  intro: ChatMsg[]
+  options: Option[]
+}
+
+/** 深渊事件注册表 */
+export const abyssEffects: AbyssEffect[] = [
+  {
+    tag: 'twoVersions', // 与 flags.twoVersions 对应
+    triggerRound: 'r3',
+    intro: [
+      { from: 'system', text: '【突发】印刷厂来电。' },
+      { from: 'system', text: '「你们发了两个版本，我们印了大的那个。」' },
+      { from: 'client', text: '在吗？海报怎么有两个版本？！' },
+      { from: 'client', text: '老板问我们公司内部是不是不统一？？' },
+    ],
+    options: [
+      {
+        id: 'abyss_1',
+        label: '装死：说是系统bug',
+        sub: 'IT部的锅',
+        flags: { blameIT: true },
+        reactions: [
+          { from: 'me', text: '（你截图了一个假的「系统异常」提示。）' },
+          { from: 'client', text: '……行吧。下次注意。' },
+          { from: 'director', text: '（私聊）你哪来的那张图？' },
+          { from: 'director', text: '（私聊）算了，别告诉我。' },
+        ],
+      },
+      {
+        id: 'abyss_2',
+        label: '承认：两个版本都是我做的',
+        sub: '硬刚',
+        death: 'honest',
+        reactions: [
+          { from: 'me', text: '是，我做了两版。一版给领导看，一版给专业看。' },
+          { from: 'client', text: '……' },
+          { from: 'client', text: '你们总监电话给我。' },
+        ],
+      },
+    ],
+  },
+]
+
+/** 首局强制钩子：第一局结束时抛出，制造「再来一局」动机 */
+export const firstGameHook: ChatMsg[] = [
+  { from: 'system', text: '【次日 00:13】' },
+  { from: 'system', text: '你收到了一封匿名邮件。' },
+  { from: 'system', text: '附件是一张名片扫描件。' },
+  { from: 'me', text: '（名片上只有一个地址，和一行手写小字：）' },
 export function nextRoundId(roundId: string, optionId: string): string | null {
   if (roundId === 'r1') return optionId === 'C' ? 'r2C' : 'r2A'
   if (roundId === 'r2A' || roundId === 'r2C') return 'r3'

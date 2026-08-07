@@ -15,7 +15,25 @@ import {
   type Option,
   type Speaker,
 } from './game/script'
-import * as sfx from './game/audio'
+import {
+  rounds,
+  endings,
+  deaths,
+  nextRoundId,
+  deliveryFiles,
+  zipFiles,
+  zipName,
+  resolveEnding,
+  flagEpilogues,
+  initialCanvas,
+  surpriseEvents,
+  abyssEffects,
+  firstGameHook,
+  type CanvasState,
+  type ChatMsg,
+  type Option,
+  type Speaker,
+} from './game/script'
 import bossRaw from './assets/boss_raw.jpg'
 import bossPro from './assets/boss_pro.jpg'
 
@@ -442,6 +460,11 @@ export default function App() {
   const [retouchIter, setRetouchIter] = useState(0) // P 图关：已认真 P 了几版
   const [retouchPro, setRetouchPro] = useState(false) // P 图关：佛光版已交付
   const [retouchFunnel, setRetouchFunnel] = useState<string[]>([]) // P 图关：已用掉的一次性选项
+  // ── 三层事件系统 ──
+  const [surpriseUsed, setSurpriseUsed] = useState(false) // 本局是否已触发突袭事件
+  const [pendingAbyss, setPendingAbyss] = useState<string | null>(null) // 已激活的深渊标记
+  const [showFirstHook, setShowFirstHook] = useState(false) // 是否显示首局钩子
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
   const pending = useRef<{ msgs: ChatMsg[]; fired: number; done: () => void } | null>(null)
   const afterTakeover = useRef<(() => void) | null>(null)
@@ -533,6 +556,31 @@ export default function App() {
       setCanNext(false)
       setBusy(true)
       if (r.canvas) setCanvas((c) => ({ ...c, ...r.canvas }))
+
+      // ── 检查是否有深渊事件需要在本轮触发 ──
+      const abyss = pendingAbyss ? abyssEffects.find((a) => a.tag === pendingAbyss && a.triggerRound === id) : null
+      if (abyss) {
+        // 深渊事件触发：先播放深渊 intro，再提供深渊选项覆盖原选项
+        setPendingAbyss(null)
+        const allIntro = [...r.intro, ...abyss.intro]
+        pushMessages(allIntro, () => {
+          setAvailable(abyss.options)
+          setBusy(false)
+        })
+        return
+      }
+
+      pushMessages(r.intro, () => setBusy(false))
+    },
+    [pushMessages, pendingAbyss],
+  )
+    (id: string) => {
+      const r = rounds[id]
+      setRoundId(id)
+      setAvailable(r.options)
+      setCanNext(false)
+      setBusy(true)
+      if (r.canvas) setCanvas((c) => ({ ...c, ...r.canvas }))
       pushMessages(r.intro, () => setBusy(false))
     },
     [pushMessages],
@@ -555,11 +603,47 @@ export default function App() {
     setRetouchIter(0)
     setRetouchPro(false)
     setRetouchFunnel([])
+    // 重置三层事件系统
+    setSurpriseUsed(false)
+    setPendingAbyss(null)
+    setShowFirstHook(false)
+    setPhase('playing')
+    startRound('r1')
+  }
+    clearTimers()
+    pending.current = null
+    afterTakeover.current = null
+    setChat([])
+    setFlags({})
+    setCanvas(initialCanvas)
+    setEndingId(null)
+    setDeathId(null)
+    setTakeover(false)
+    setZipFx(false)
+    lastChosenRef.current = ''
+    setAttachment(null)
+    setDocOpen(null)
+    setRetouchIter(0)
+    setRetouchPro(false)
+    setRetouchFunnel([])
     setPhase('playing')
     startRound('r1')
   }
 
   const choose = (opt: Option) => {
+    if (busy) return
+    sfx.click()
+    setBusy(true)
+    const mergedFlags = opt.flags ? { ...flags, ...opt.flags } : flags
+    if (opt.canvas) setCanvas((c) => ({ ...c, ...opt.canvas }))
+    if (opt.flags) setFlags(mergedFlags)
+
+    // ── 深渊标记：选完后记录，延迟到目标轮次触发 ──
+    if (opt.abyssTag) {
+      setPendingAbyss(opt.abyssTag)
+    }
+
+    const afterReactions = () => {
     if (busy) return
     sfx.click()
     setBusy(true)
@@ -619,6 +703,50 @@ export default function App() {
   }
 
   const goNext = () => {
+    const next = nextRoundId(roundId, lastChosenRef.current)
+    if (!next) return
+    // 第 2 轮没保存就交付 → 机房断电，毕业
+    if ((roundId === 'r2A' || roundId === 'r2C') && !flags.saved) {
+      setDeathId('blackout')
+      setPhase('death')
+      return
+    }
+
+    // ── 突袭事件：40% 概率插入（每局最多一次）──
+    if (!surpriseUsed && Math.random() < 0.4) {
+      const pool = surpriseEvents.filter((e) => !e.condition || e.condition(flags))
+      if (pool.length > 0) {
+        // 按权重随机抽取
+        const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0)
+        let r = Math.random() * totalWeight
+        const chosen = pool.find((e) => {
+          r -= e.weight
+          return r <= 0
+        }) || pool[0]
+
+        setSurpriseUsed(true)
+        setBusy(true)
+        if (chosen.canvas) setCanvas((c) => ({ ...c, ...chosen.canvas }))
+        if (chosen.flags) setFlags((f) => ({ ...f, ...chosen.flags }))
+        pushMessages(
+          [
+            { from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` },
+            ...chosen.intro,
+          ],
+          () => {
+            setBusy(false)
+            setCanNext(true)
+          },
+        )
+        return
+      }
+    }
+
+    // 剧情内动作：先把稿子发出去，新需求自己找上门
+    sfx.send() // 嗖～发过去
+    setBusy(true)
+    pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
+  }
     const next = nextRoundId(roundId, lastChosenRef.current)
     if (!next) return
     // 第 2 轮没保存就交付 → 机房断电，毕业
