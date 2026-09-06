@@ -159,6 +159,32 @@
   }
 }
 
+/* 截图仪式：截图飞入聊天窗口 */
+@keyframes shotIn {
+  from {
+    transform: translateY(46px) scale(0.55) rotate(-5deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1) rotate(0.5deg);
+    opacity: 1;
+  }
+}
+
+/* 截图仪式：松手太早取消时按钮抖动 */
+@keyframes shakeX {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}
+
 /* 病毒：红屏闪烁 */
 @keyframes alarmFlash {
   0%, 100% {

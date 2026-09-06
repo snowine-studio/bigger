@@ -37,6 +37,8 @@ export interface Option {
   funnel?: boolean
   /** true = 触发打包 zip 动画（R3C） */
   zip?: boolean
+  /** 截图交付仪式：send = 长按截图发送（R3B）；ignore = 长按已读不回（R3D） */
+  ritual?: 'send' | 'ignore'
   /** 生存结局 id */
   ending?: string
   /** 毕业死法 id（菜鸟设计师的一万种死法） */
@@ -293,6 +295,7 @@ export const rounds: Record<string, Round> = {
         label: '关掉 AI，亲手改最后一版',
         sub: '违背流程，后果自负',
         canvas: { logoSize: 45, proVersion: true, aiVersion: false, slogan: false, productInLogo: false },
+        ritual: 'send',
         ending: 'hand',
         reactions: [
           { from: 'me', text: '（你关掉 AI，把 Logo 放回 45%，让产品重新呼吸。）' },
@@ -323,6 +326,7 @@ export const rounds: Record<string, Round> = {
         id: 'R3D',
         label: '（已读不回）',
         sub: '……',
+        ritual: 'ignore',
         ending: 'ignore',
         reactions: [],
       },
@@ -343,6 +347,45 @@ export const deliveryFiles: Record<string, string> = {
   r2A: '海报_v2_最终版.psd',
   r2C: '海报_专业版_最终版.psd',
 }
+
+// ─────────────────── 截图发送仪式 ───────────────────
+
+/** 心境类型：决定长按发送时的内心 OS */
+export type RitualMood = 'confirm' | 'compromise' | 'silent'
+
+/** 内心 OS 文案库 */
+export const innerThoughts: Record<RitualMood, string[]> = {
+  confirm: [
+    '这一版是对的。但客户可能觉得「不够刺激」。',
+    '你保留了专业底线。底线值多少钱？',
+    '李总看不懂这一版。但他会假装懂。',
+  ],
+  compromise: [
+    '客户只会看到 Logo 很大。他不会知道产品被遮住了。',
+    '你亲手毁掉了自己的设计。又一次。',
+    '这版发出去，你的作品集里不会放它。',
+  ],
+  silent: [
+    '沉默也是一种交付。至少你没有参与。',
+    '消息显示「已读」。这比任何设计都有力量。',
+    '李总正在对着空白的输入框发呆。',
+  ],
+}
+
+/** 每个选项交付时的心境（没配的默认 compromise） */
+export const optionMood: Record<string, RitualMood> = {
+  A: 'compromise',
+  C: 'compromise',
+  A1: 'compromise',
+  A3: 'compromise',
+  C1: 'compromise',
+  C3: 'compromise',
+  R3B: 'confirm',
+  R3D: 'silent',
+}
+
+/** R3B 亲手改的最后一版，交付时的文件名 */
+export const handDeliverFile = '海报_手工版_效率低下.psd'
 
 // R3C 打包动画：设计师的命名堕落史
 export const zipFiles: string[] = [

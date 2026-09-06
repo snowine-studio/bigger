@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   rounds,
   endings,
@@ -10,9 +10,13 @@ import {
   resolveEnding,
   flagEpilogues,
   initialCanvas,
+  innerThoughts,
+  optionMood,
+  handDeliverFile,
   type CanvasState,
   type ChatMsg,
   type Option,
+  type RitualMood,
   type Speaker,
 } from './game/script'
 import * as sfx from './game/audio'
@@ -110,6 +114,198 @@ function ZipOverlay({ onDone }: { onDone: () => void }) {
           <div className="text-zinc-500 text-xs mt-3 animate-[fadeIn_.3s_ease_.7s_both]">点按任意处继续</div>
         </>
       )}
+    </div>
+  )
+}
+
+/** 截图发送仪式：客户手机视角。内心 OS → 长按 0.8s 发送（30% 前松手=取消）→ 截图飞入聊天窗口 → 李总回复 */
+function SendRitualOverlay({
+  fileName,
+  mood,
+  variant,
+  canvas,
+  clientLine,
+  onDone,
+}: {
+  fileName: string
+  mood: RitualMood
+  variant: 'send' | 'ignore'
+  canvas: CanvasState
+  clientLine: string
+  onDone: () => void
+}) {
+  const HOLD_MS = 800
+  const CANCEL_BEFORE = 30 // 松手取消线（%）
+  const ignore = variant === 'ignore'
+  const [progress, setProgress] = useState(0)
+  const [stage, setStage] = useState<'hold' | 'sent' | 'done'>('hold')
+  const [cancelled, setCancelled] = useState(false)
+  const prog = useRef(0)
+  const baseAt = useRef(0)
+  const startAt = useRef(0)
+  const holding = useRef(false)
+  const finished = useRef(false)
+  const raf = useRef(0)
+  const stageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const thought = useMemo(() => {
+    const pool = innerThoughts[mood]
+    return pool[Math.floor(Math.random() * pool.length)]
+  }, [mood])
+
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(raf.current)
+      if (stageTimer.current) clearTimeout(stageTimer.current)
+    },
+    [],
+  )
+
+  const setP = (v: number) => {
+    prog.current = v
+    setProgress(v)
+  }
+
+  const finish = () => {
+    if (finished.current) return
+    finished.current = true
+    holding.current = false
+    setP(100)
+    setStage('sent')
+    if (ignore) sfx.drop()
+    else sfx.send()
+    stageTimer.current = setTimeout(
+      () => {
+        setStage('done')
+        if (!ignore) sfx.pop('client')
+      },
+      ignore ? 1200 : 950,
+    )
+  }
+
+  const tick = () => {
+    const p = Math.min(100, baseAt.current + ((performance.now() - startAt.current) / HOLD_MS) * 100)
+    setP(p)
+    if (p >= 100) {
+      finish()
+      return
+    }
+    raf.current = requestAnimationFrame(tick)
+  }
+
+  const pressStart = (e: React.PointerEvent) => {
+    e.preventDefault()
+    if (finished.current || holding.current) return
+    sfx.click()
+    setCancelled(false)
+    holding.current = true
+    baseAt.current = prog.current
+    startAt.current = performance.now()
+    raf.current = requestAnimationFrame(tick)
+  }
+
+  const pressEnd = () => {
+    if (finished.current || !holding.current) return
+    holding.current = false
+    if (prog.current >= CANCEL_BEFORE) return // 过了不可撤回点：松手也继续
+    cancelAnimationFrame(raf.current)
+    setP(0)
+    setCancelled(true)
+  }
+
+  return (
+    <div
+      onClick={() => stage === 'done' && onDone()}
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/95 p-4 ${stage === 'done' ? 'cursor-pointer' : ''}`}
+    >
+      <div className="text-[10px] tracking-[0.4em] text-zinc-500">
+        {ignore ? '客户手机视角 · 你没有做的事' : '客户手机视角'}
+      </div>
+      <div className="w-full max-w-sm overflow-hidden rounded-xl border-[3px] border-black bg-[#ededed] shadow-[8px_8px_0_#1e50a2]">
+        {/* 微信顶栏 */}
+        <div className="flex items-center gap-2 border-b-2 border-black bg-black px-3 py-2 text-white">
+          <span className="text-lg leading-none">‹</span>
+          <div className="flex-1 text-center">
+            <div className="text-sm font-bold">李总</div>
+            <div className="text-[9px] text-zinc-400">宏达国际商贸（集团）有限公司</div>
+          </div>
+          <span className="text-lg leading-none">···</span>
+        </div>
+
+        {/* 聊天区 */}
+        <div className="min-h-[300px] space-y-3 p-3">
+          {/* 李总的最后一条消息 */}
+          <div className="flex items-end gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border-2 border-black bg-[#ffe800] text-xs font-black text-black">甲</div>
+            <div className="max-w-[75%] rounded-lg border-2 border-black bg-white px-3 py-2 text-sm text-black shadow-[2px_2px_0_#000]">{clientLine}</div>
+          </div>
+
+          {/* 内心 OS（按住期间悬浮） */}
+          {stage === 'hold' && (
+            <div className="mx-auto w-fit max-w-[92%] rounded-lg border-2 border-dashed border-zinc-400 bg-zinc-100 px-3 py-1.5 text-center text-xs italic leading-relaxed text-zinc-500 animate-[fadeIn_.5s_ease]">
+              💭 {thought}
+            </div>
+          )}
+
+          {/* 截图飞入（send 变体） */}
+          {!ignore && stage !== 'hold' && (
+            <div className="flex flex-col items-end gap-1 animate-[shotIn_.45s_ease]">
+              <div className="rounded-lg border-2 border-black bg-[#95ec69] p-1.5 shadow-[2px_2px_0_#000]">
+                <div className="w-24">
+                  <Poster c={canvas} />
+                </div>
+              </div>
+              <div className="font-mono text-[9px] text-zinc-500">{fileName} · 截图</div>
+            </div>
+          )}
+
+          {/* 已读不回（ignore 变体）：什么都没发出去 */}
+          {ignore && stage !== 'hold' && (
+            <div className="space-y-2 pt-2 animate-[fadeIn_.6s_ease]">
+              <div className="pl-10 text-[10px] text-zinc-400">已读</div>
+              <p className="pt-4 text-center text-xs text-zinc-500">你盯着屏幕看了很久。</p>
+              <p className="text-center font-mono text-[10px] text-zinc-400">（文件未保存。你甚至懒得命名它。）</p>
+            </div>
+          )}
+
+          {/* 李总回复 */}
+          {!ignore && stage === 'done' && (
+            <div className="flex items-end gap-2 animate-[fadeIn_.4s_ease]">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded border-2 border-black bg-[#ffe800] text-xs font-black text-black">甲</div>
+              <div className="rounded-lg border-2 border-black bg-white px-3 py-2 text-sm text-black shadow-[2px_2px_0_#000]">收到，辛苦啦！</div>
+            </div>
+          )}
+        </div>
+
+        {/* 底部操作条 */}
+        <div className="border-t-2 border-black bg-[#f7f7f7] p-3">
+          {stage === 'hold' ? (
+            <>
+              <button
+                onPointerDown={pressStart}
+                onPointerUp={pressEnd}
+                onPointerLeave={pressEnd}
+                onPointerCancel={pressEnd}
+                onContextMenu={(e) => e.preventDefault()}
+                className="relative w-full touch-none select-none overflow-hidden border-[3px] border-black bg-white py-3 font-black text-black shadow-[4px_4px_0_#e60012]"
+                style={cancelled ? { animation: 'shakeX .3s ease' } : undefined}
+              >
+                <span className="absolute inset-y-0 left-0 bg-lime-300" style={{ width: `${progress}%` }} />
+                <span className="relative">
+                  {ignore ? '📵 长按已读不回' : progress >= 70 ? '即将发送…' : '📸 长按发送截图'}
+                </span>
+              </button>
+              <div className="mt-1.5 text-center text-[10px] text-zinc-400">
+                {cancelled ? '松手太早，发送取消。你在犹豫什么？' : '长按 0.8 秒 · 30% 前松手 = 取消'}
+              </div>
+            </>
+          ) : (
+            <div className="py-3 text-center text-xs text-zinc-400">
+              {stage === 'done' ? <span className="animate-pulse">点按任意处继续</span> : <span>{ignore ? '……' : '发送中…'}</span>}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -432,6 +628,14 @@ export default function App() {
   const [deathId, setDeathId] = useState<string | null>(null)
   const [takeover, setTakeover] = useState(false) // AI 全屏吞噬
   const [zipFx, setZipFx] = useState(false) // 打包 zip 动画
+  // 截图发送仪式：fileName 文件名 / mood 内心OS类型 / variant send=交付 ignore=已读不回 / after=仪式结束后的续接
+  const [ritual, setRitual] = useState<{
+    fileName: string
+    mood: RitualMood
+    variant: 'send' | 'ignore'
+    clientLine: string
+    after: () => void
+  } | null>(null)
   const [zoomed, setZoomed] = useState(false) // 海报全屏放大
   const [attachment, setAttachment] = useState<'offer' | 'resume' | 'portfolio' | null>(null) // 邮件附件预览
   const [mailView, setMailView] = useState<'offer' | 'trash' | 'rejections'>('offer') // 邮箱里正在看的文件夹
@@ -549,6 +753,7 @@ export default function App() {
     setDeathId(null)
     setTakeover(false)
     setZipFx(false)
+    setRitual(null)
     lastChosenRef.current = ''
     setAttachment(null)
     setDocOpen(null)
@@ -592,7 +797,19 @@ export default function App() {
       }
     }
 
-    if (opt.zip) {
+    if (opt.ritual) {
+      // 截图交付仪式：R3B 亲手交付（长按发送）／R3D 已读不回（长按沉默）
+      setRitual({
+        fileName: handDeliverFile,
+        mood: optionMood[opt.id] ?? 'confirm',
+        variant: opt.ritual,
+        clientLine: '那个 Logo……再大一点。',
+        after: () => {
+          setRitual(null)
+          pushMessages(opt.reactions, afterReactions)
+        },
+      })
+    } else if (opt.zip) {
       // 打包发客户：文件逐个弹出压成 zip，点按才继续
       afterTakeover.current = () => {
         afterTakeover.current = null
@@ -627,10 +844,26 @@ export default function App() {
       setPhase('death')
       return
     }
-    // 剧情内动作：先把稿子发出去，新需求自己找上门
-    sfx.send() // 嗖～发过去
+    // 截图发送仪式：长按把这一版交付出去，然后新需求自己找上门
+    sfx.click()
     setBusy(true)
-    pushMessages([{ from: 'me', text: `（你发送了「${deliveryFiles[roundId] ?? '海报.psd'}」）` }], () => startRound(next))
+    const file = deliveryFiles[roundId] ?? '海报.psd'
+    setRitual({
+      fileName: file,
+      mood: optionMood[lastChosenRef.current] ?? 'compromise',
+      variant: 'send',
+      clientLine: '改好了发我看看，辛苦啦！',
+      after: () => {
+        setRitual(null)
+        pushMessages(
+          [
+            { from: 'me', text: `（你截图发送了「${file}」）` },
+            { from: 'client', text: '收到，辛苦啦！' },
+          ],
+          () => startRound(next),
+        )
+      },
+    })
   }
 
   const epilogues = flagEpilogues(flags)
@@ -1844,7 +2077,7 @@ export default function App() {
                 onClick={goNext}
                 className="col-span-2 md:col-span-1 w-full bg-lime-300 text-black border-[3px] border-black font-black py-4 tracking-widest shadow-[5px_5px_0_#000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#000] transition-all"
               >
-                📎 发送「{deliveryFiles[roundId] ?? '海报.psd'}」→
+                📸 截图发送「{deliveryFiles[roundId] ?? '海报.psd'}」→
               </button>
             )}
             {!canNext && available.length === 0 && busy && (
@@ -1872,6 +2105,18 @@ export default function App() {
 
       {/* 打包 zip 动画 */}
       {zipFx && <ZipOverlay onDone={() => afterTakeover.current?.()} />}
+
+      {/* 截图发送仪式 */}
+      {ritual && (
+        <SendRitualOverlay
+          fileName={ritual.fileName}
+          mood={ritual.mood}
+          variant={ritual.variant}
+          clientLine={ritual.clientLine}
+          canvas={canvas}
+          onDone={() => ritual.after()}
+        />
+      )}
 
       {/* AI 全屏吞噬：新丑风贴纸标吃掉整个屏幕（点按继续） */}
       {takeover && (
