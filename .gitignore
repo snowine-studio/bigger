@@ -23,3 +23,4 @@ dist-ssr
 *.sln
 *.sw?
 再大一点-demo-dist.zip
+.worktrees/
