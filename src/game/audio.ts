@@ -15,7 +15,7 @@ function ac(): Ctx {
     master.gain.value = 0.9
     master.connect(ctx.destination)
   }
-  if (ctx.state === 'suspended') void ctx.resume()
+  if (ctx.state === 'suspended') void ctx.resume().catch(() => {})
   return ctx
 }
 
@@ -89,7 +89,11 @@ function noise(dur: number, at: number | undefined, gain: number, lowpass: numbe
 /** 按钮啵声 */
 export function click() {
   if (muted) return
-  tone({ type: 'square', freq: 700, freqEnd: 980, dur: 0.07, gain: 0.06 })
+  try {
+    tone({ type: 'square', freq: 700, freqEnd: 980, dur: 0.07, gain: 0.06 })
+  } catch {
+    // 音频失败不影响交互。
+  }
 }
 
 /** 聊天气泡音：按说话人区分音高 */
@@ -227,11 +231,15 @@ function bgmTick() {
 
 /** 首页 BGM（浏览器要求首次交互后才能发声） */
 export function startBgm() {
-  ac()
-  if (bgmTimer !== null) return
-  bgmStep = 0
-  bgmNext = ac().currentTime + 0.08
-  bgmTimer = window.setInterval(bgmTick, 40)
+  try {
+    ac()
+    if (bgmTimer !== null) return
+    bgmStep = 0
+    bgmNext = ac().currentTime + 0.08
+    bgmTimer = window.setInterval(bgmTick, 40)
+  } catch {
+    // 音频失败不影响进入游戏或独立模式。
+  }
 }
 
 export function stopBgm() {

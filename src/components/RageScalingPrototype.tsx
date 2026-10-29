@@ -56,6 +56,19 @@ export function RageScalingPrototype({ onExit }: { onExit: () => void }) {
     }
   }, [isRaging, isSingularity])
 
+  useEffect(() => {
+    const stopOnFocusLoss = () => setIsRaging(false)
+    const stopOnVisibilityLoss = () => {
+      if (document.hidden) stopOnFocusLoss()
+    }
+    window.addEventListener('blur', stopOnFocusLoss)
+    document.addEventListener('visibilitychange', stopOnVisibilityLoss)
+    return () => {
+      window.removeEventListener('blur', stopOnFocusLoss)
+      document.removeEventListener('visibilitychange', stopOnVisibilityLoss)
+    }
+  }, [])
+
   const start = () => {
     if (isSingularity || isRaging) return
     sfx.startRage()
@@ -168,6 +181,7 @@ export function RageScalingPrototype({ onExit }: { onExit: () => void }) {
             onPointerCancel={stop}
             onKeyDown={keyStart}
             onKeyUp={keyStop}
+            onBlur={stop}
             onContextMenu={(event) => event.preventDefault()}
             className={`touch-none select-none rounded-md px-5 py-3 text-xs font-bold text-white transition-transform sm:text-sm ${isRaging ? 'scale-95 bg-[#c0392b] shadow-[0_0_15px_#ff5555]' : 'bg-[#e74c3c]'}`}
           >
