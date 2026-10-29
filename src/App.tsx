@@ -20,6 +20,7 @@ import {
   type Speaker,
 } from './game/script'
 import * as sfx from './game/audio'
+import { RageScalingPrototype } from './components/RageScalingPrototype'
 import bossRaw from './assets/boss_raw.jpg'
 import bossPro from './assets/boss_pro.jpg'
 
@@ -365,6 +366,7 @@ type Phase =
   | 'interlude'
   | 'ending'
   | 'death'
+  | 'rage'
 
 // 死法图鉴（localStorage）
 const DEATHS_KEY = 'zdyld_deaths'
@@ -877,6 +879,15 @@ export default function App() {
     return () => clearTimeout(t)
   }, [phase])
 
+  if (phase === 'rage') {
+    return (
+      <>
+        <RageScalingPrototype onExit={() => setPhase('intro')} />
+        <MuteBtn />
+      </>
+    )
+  }
+
   // ─────────────── 开场 ───────────────
   if (phase === 'intro') {
     return (
@@ -908,6 +919,16 @@ export default function App() {
           className="mt-4 px-14 py-5 bg-[#e60012] text-[#ffe800] border-4 border-black font-black text-2xl tracking-[0.3em] shadow-[8px_8px_0_#ffe800] hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[4px_4px_0_#ffe800] active:translate-x-[6px] active:translate-y-[6px] active:shadow-none transition-all"
         >
           开始
+        </button>
+        <button
+          onClick={() => {
+            sfx.stopBgm()
+            sfx.click()
+            setPhase('rage')
+          }}
+          className="px-6 py-2.5 bg-[#e60012] text-white border-[3px] border-black font-black text-sm tracking-widest shadow-[4px_4px_0_#ffe800] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0_#ffe800] transition-all"
+        >
+          ⚡ 狂暴放大
         </button>
         <button
           onClick={() => {
