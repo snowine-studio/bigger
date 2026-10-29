@@ -240,3 +240,59 @@ export function stopBgm() {
     bgmTimer = null
   }
 }
+
+// ─────────────────────── 狂暴放大持续音 ───────────────────────
+
+let rageOsc: OscillatorNode | null = null
+let rageGain: GainNode | null = null
+
+export function startRage(): void {
+  if (rageOsc) return
+  try {
+    const c = ac()
+    const osc = c.createOscillator()
+    const gain = c.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(60, c.currentTime)
+    gain.gain.setValueAtTime(0, c.currentTime)
+    osc.connect(gain)
+    gain.connect(out())
+    osc.start()
+    rageOsc = osc
+    rageGain = gain
+  } catch {
+    rageOsc = null
+    rageGain = null
+  }
+}
+
+export function updateRage(scale: number, active: boolean): void {
+  if (!rageOsc || !rageGain) return
+  try {
+    const c = ac()
+    const normalized = Math.min(Math.max((scale - 100) / 9900, 0), 1)
+    rageOsc.frequency.setTargetAtTime(60 + normalized * 740, c.currentTime, 0.015)
+    const volume = active && scale > 100 && !muted ? 0.05 + normalized * 0.15 : 0
+    rageGain.gain.setTargetAtTime(volume, c.currentTime, 0.015)
+  } catch {
+    // 音频失败不影响视觉交互。
+  }
+}
+
+export function stopRage(): void {
+  const osc = rageOsc
+  const gain = rageGain
+  rageOsc = null
+  rageGain = null
+  if (!osc || !gain) return
+  try {
+    gain.gain.setTargetAtTime(0, ac().currentTime, 0.005)
+    osc.stop(ac().currentTime + 0.03)
+    osc.onended = () => {
+      osc.disconnect()
+      gain.disconnect()
+    }
+  } catch {
+    // 已关闭或不可用的音频上下文无需额外处理。
+  }
+}
